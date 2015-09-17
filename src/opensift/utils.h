@@ -1,10 +1,10 @@
 /**@file
    Miscellaneous utility functions.
-   
+
    Copyright (C) 2006-2012  Rob Hess <rob@iqengines.com>
 
    @version 1.1.2-20100521
-*/
+   */
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -12,7 +12,23 @@
 #include "cxcore.h"
 
 #include <stdio.h>
-#include <dirent.h>
+//#include <dirent.h>
+
+
+
+
+#define LOG_LEVEL_NONE 1
+#define LOG_LEVEL_INFO 1
+#define LOG_LEVEL_WARN 2
+#define LOG_LEVEL_ERROR 3
+
+void write_log(int level, const char* file, int line, const char* format, ...);
+
+#define WRITE_INFO_LOG(...)  write_log(LOG_LEVEL_INFO, __FILE__, __LINE__, __VA_ARGS__)
+#define WRITE_WARN_LOG(...)  write_log(LOG_LEVEL_WARN, __FILE__, __LINE__, __VA_ARGS__)
+#define WRITE_ERROR_LOG(...)  write_log(LOG_LEVEL_ERROR, __FILE__, __LINE__, __VA_ARGS__)
+
+
 
 
 /* absolute value */
@@ -25,85 +41,85 @@
 
 /**
    A function to get a pixel value from an 8-bit unsigned image.
-   
+
    @param img an image
    @param r row
    @param c column
    @return Returns the value of the pixel at (\a r, \a c) in \a img
-*/
-static inline int pixval8( IplImage* img, int r, int c )
+   */
+static inline int pixval8(IplImage* img, int r, int c)
 {
-  return (int)( ( (uchar*)(img->imageData + img->widthStep*r) )[c] );
+    return (int)(((uchar*)(img->imageData + img->widthStep*r))[c]);
 }
 
 
 /**
    A function to set a pixel value in an 8-bit unsigned image.
-   
+
    @param img an image
    @param r row
    @param c column
    @param val pixel value
-*/
-static inline void setpix8( IplImage* img, int r, int c, uchar val)
+   */
+static inline void setpix8(IplImage* img, int r, int c, uchar val)
 {
-  ( (uchar*)(img->imageData + img->widthStep*r) )[c] = val;
+    ((uchar*)(img->imageData + img->widthStep*r))[c] = val;
 }
 
 
 /**
    A function to get a pixel value from a 32-bit floating-point image.
-   
+
    @param img an image
    @param r row
    @param c column
    @return Returns the value of the pixel at (\a r, \a c) in \a img
-*/
-static inline float pixval32f( IplImage* img, int r, int c )
+   */
+static inline float pixval32f(IplImage* img, int r, int c)
 {
-  return ( (float*)(img->imageData + img->widthStep*r) )[c];
+    return ((float*)(img->imageData + img->widthStep*r))[c];
 }
 
 
 /**
    A function to set a pixel value in a 32-bit floating-point image.
-   
+
    @param img an image
    @param r row
    @param c column
    @param val pixel value
-*/
-static inline void setpix32f( IplImage* img, int r, int c, float val )
+   */
+static inline void setpix32f(IplImage* img, int r, int c, float val)
 {
-  ( (float*)(img->imageData + img->widthStep*r) )[c] = val;
+    ((float*)(img->imageData + img->widthStep*r))[c] = val;
 }
 
 
 /**
    A function to get a pixel value from a 64-bit floating-point image.
-   
+
    @param img an image
    @param r row
    @param c column
    @return Returns the value of the pixel at (\a r, \a c) in \a img
-*/
-static inline double pixval64f( IplImage* img, int r, int c )
+   */
+static inline double pixval64f(IplImage* img, int r, int c)
 {
-  return (double)( ( (double*)(img->imageData + img->widthStep*r) )[c] );
+    return (double)(((double*)(img->imageData + img->widthStep*r))[c]);
 }
 
 
 /**
    A function to set a pixel value in a 64-bit floating-point image.
-   
+
    @param img an image
    @param r row
    @param c column
    @param val pixel value
-*/
-static inline void setpix64f( IplImage* img, int r, int c, double val )
+   */
+static inline void setpix64f(IplImage* img, int r, int c, double val)
 {
-  ( (double*)(img->imageData + img->widthStep*r) )[c] = val;
+    ((double*)(img->imageData + img->widthStep*r))[c] = val;
 }
 
 
@@ -114,10 +130,10 @@ static inline void setpix64f( IplImage* img, int r, int c, double val )
    Prints an error message and aborts the program.  The error message is
    of the form "Error: ...", where the ... is specified by the \a format
    argument
-   
+
    @param format an error message format string (as with \c printf(3)).
-*/
-extern void fatal_error( char* format, ... );
+   */
+extern void fatal_error(char* format, ...);
 
 
 /**
@@ -127,13 +143,13 @@ extern void fatal_error( char* format, ... );
    @param file the name of a file
 
    @param extn a new extension for \a file; should not include a dot (i.e.
-     \c "jpg", not \c ".jpg") unless the new file extension should contain
-     two dots.
+   \c "jpg", not \c ".jpg") unless the new file extension should contain
+   two dots.
 
    @return Returns a new string formed as described above.  If \a file does
-     not have an extension, this function simply adds one.
-*/
-extern char* replace_extension( const char* file, const char* extn );
+   not have an extension, this function simply adds one.
+   */
+extern char* replace_extension(const char* file, const char* extn);
 
 
 /**
@@ -143,9 +159,9 @@ extern char* replace_extension( const char* file, const char* extn );
    @param file a file name
 
    @return Returns a new string containing a full path name consisting of
-     \a path prepended to \a file.
-*/
-extern char* prepend_path( const char* path, const char* file );
+   \a path prepended to \a file.
+   */
+extern char* prepend_path(const char* path, const char* file);
 
 
 /**
@@ -155,28 +171,28 @@ extern char* prepend_path( const char* path, const char* file );
    @param pathname a (full) path name
 
    @return Returns the basename of \a pathname.
-*/
-extern char* basename( const char* pathname );
+   */
+extern char* basename(const char* pathname);
 
 
 /**
    Displays progress in the console with a spinning pinwheel.  Every time this
    function is called, the state of the pinwheel is incremented.  The pinwheel
    has four states that loop indefinitely: '|', '/', '-', '\'.
-   
+
    @param done if 0, this function simply increments the state of the pinwheel;
-     otherwise it prints "done"
-*/
-extern void progress( int done );
+   otherwise it prints "done"
+   */
+extern void progress(int done);
 
 
 /**
    Erases a specified number of characters from a stream.
-   
+
    @param stream the stream from which to erase characters
    @param n the number of characters to erase
-*/
-extern void erase_from_stream( FILE* stream, int n );
+   */
+extern void erase_from_stream(FILE* stream, int n);
 
 
 /**
@@ -187,18 +203,18 @@ extern void erase_from_stream( FILE* stream, int n );
    @param size size in bytes of elements in \a array
 
    @return Returns the new number of elements allocated for \a array.  If no
-     memory is available, returns 0 and frees \a array.
-*/
-extern int array_double( void** array, int n, int size );
+   memory is available, returns 0 and frees \a array.
+   */
+extern int array_double(void** array, int n, int size);
 
 
 /**
    Calculates the squared distance between two points.
-   
+
    @param p1 a point
    @param p2 another point
-*/
-extern double dist_sq_2D( CvPoint2D64f p1, CvPoint2D64f p2 );
+   */
+extern double dist_sq_2D(CvPoint2D64f p1, CvPoint2D64f p2);
 
 
 /**
@@ -209,19 +225,19 @@ extern double dist_sq_2D( CvPoint2D64f p1, CvPoint2D64f p2 );
    @param r the x's radius
    @param w the x's line weight
    @param color the color of the x
-*/
-extern void draw_x( IplImage* img, CvPoint pt, int r, int w, CvScalar color );
+   */
+extern void draw_x(IplImage* img, CvPoint pt, int r, int w, CvScalar color);
 
 
 /**
    Combines two images by scacking one on top of the other
-   
+
    @param img1 top image
    @param img2 bottom image
 
    @return Returns the image resulting from stacking \a img1 on top if \a img2
-*/
-extern IplImage* stack_imgs( IplImage* img1, IplImage* img2 );
+   */
+extern IplImage* stack_imgs(IplImage* img1, IplImage* img2);
 
 
 /**
@@ -231,14 +247,14 @@ extern IplImage* stack_imgs( IplImage* img1, IplImage* img2 );
 
    @param img an image, possibly too large to display on-screen
    @param title the title of the window in which \a img is displayed
-*/
-extern void display_big_img( IplImage* img, char* title );
+   */
+extern void display_big_img(IplImage* img, char* title);
 
 
 /**
    Allows user to view an array of images as a video.  Keyboard controls
    are as follows:
-   
+
    <ul>
    <li>Space - start and pause playback</li>
    <li>Page Up - skip forward 10 frames</li>
@@ -253,8 +269,8 @@ extern void display_big_img( IplImage* img, char* title );
    @param imgs an array of images
    @param n number of images in \a imgs
    @param win_name name of window in which images are displayed
-*/
-extern void vid_view( IplImage** imgs, int n, char* win_name );
+   */
+extern void vid_view(IplImage** imgs, int n, char* win_name);
 
 
 /**
@@ -263,7 +279,7 @@ extern void vid_view( IplImage** imgs, int n, char* win_name );
    @param name the name of the window we're checking
 
    @return Returns 1 if the window named \a name has been closed or 0 otherwise
-*/
-extern int win_closed( char* name );
+   */
+extern int win_closed(char* name);
 
 #endif
