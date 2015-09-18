@@ -523,9 +523,11 @@ static void extract_corresp_pts(struct feature** features, int n, int mtype,
     for (i = 0; i < n; i++)
     {
         match = get_match(features[i], mtype);
-        if (!match)
-            fatal_error("feature does not have match of type %d, %s line %d",
-            mtype, __FILE__, __LINE__);
+        if (!match) {
+            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
+            return;
+        }
+
         _pts[i] = features[i]->img_pt;
         _mpts[i] = match->mdl_pt;
     }
@@ -534,9 +536,11 @@ static void extract_corresp_pts(struct feature** features, int n, int mtype,
     for (i = 0; i < n; i++)
     {
         match = get_match(features[i], mtype);
-        if (!match)
-            fatal_error("feature does not have match of type %d, %s line %d",
-            mtype, __FILE__, __LINE__);
+        if (!match) {
+            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
+            return;
+        }
+                        
         _pts[i] = features[i]->img_pt;
         _mpts[i] = match->img_pt;
     }
@@ -583,9 +587,11 @@ struct feature*** consensus)
     for (i = 0; i < n; i++)
     {
         match = get_match(features[i], mtype);
-        if (!match)
-            fatal_error("feature does not have match of type %d, %s line %d",
-            mtype, __FILE__, __LINE__);
+        if (!match) {
+            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
+            return -1;
+        }
+            
         pt = features[i]->img_pt;
         mpt = match->mdl_pt;
         err = err_fn(pt, mpt, M);
@@ -596,10 +602,12 @@ struct feature*** consensus)
     else
     for (i = 0; i < n; i++)
     {
-        match = get_match(features[i], mtype);
-        if (!match)
-            fatal_error("feature does not have match of type %d, %s line %d",
-            mtype, __FILE__, __LINE__);
+        match = get_match(features[i], mtype);        
+        if (!match) {
+            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
+            return -1;
+        }
+            
         pt = features[i]->img_pt;
         mpt = match->img_pt;
         err = err_fn(pt, mpt, M);

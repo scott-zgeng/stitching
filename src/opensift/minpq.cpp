@@ -81,8 +81,7 @@ int minpq_insert(struct min_pq* min_pq, void* data, int key)
             sizeof(struct pq_node));
         if (!min_pq->nallocd)
         {
-            fprintf(stderr, "Warning: unable to allocate memory, %s, line %d\n",
-                __FILE__, __LINE__);
+            WRITE_WARN_LOG("unable to allocate memory");            
             return 1;
         }
     }
@@ -108,9 +107,8 @@ int minpq_insert(struct min_pq* min_pq, void* data, int key)
   */
 void* minpq_get_min(struct min_pq* min_pq)
 {
-    if (min_pq->n < 1)
-    {
-        fprintf(stderr, "Warning: PQ empty, %s line %d\n", __FILE__, __LINE__);
+    if (min_pq->n < 1) {
+        WRITE_WARN_LOG("PQ empty");        
         return NULL;
     }
     return min_pq->pq_array[0].data;
@@ -131,11 +129,11 @@ void* minpq_extract_min(struct min_pq* min_pq)
 {
     void* data;
 
-    if (min_pq->n < 1)
-    {
-        fprintf(stderr, "Warning: PQ empty, %s line %d\n", __FILE__, __LINE__);
+    if (min_pq->n < 1) {
+        WRITE_WARN_LOG("Warning: PQ empty");        
         return NULL;
     }
+
     data = min_pq->pq_array[0].data;
     min_pq->n--;
     min_pq->pq_array[0] = min_pq->pq_array[min_pq->n];
@@ -152,14 +150,12 @@ void* minpq_extract_min(struct min_pq* min_pq)
   */
 void minpq_release(struct min_pq** min_pq)
 {
-    if (!min_pq)
-    {
-        fprintf(stderr, "Warning: NULL pointer error, %s line %d\n", __FILE__,
-            __LINE__);
+    if (!min_pq) {
+        WRITE_WARN_LOG("NULL pointer error");        
         return;
     }
-    if (*min_pq && (*min_pq)->pq_array)
-    {
+
+    if (*min_pq && (*min_pq)->pq_array) {
         free((*min_pq)->pq_array);
         free(*min_pq);
         *min_pq = NULL;

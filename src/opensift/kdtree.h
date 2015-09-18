@@ -95,10 +95,9 @@ extern int kdtree_bbf_knn(struct kd_node* kd_root, struct feature* feat,
    (in case \a k neighbors could not be found before examining
    \a max_nn_checks keypoint entries).
    */
-extern int kdtree_bbf_spatial_knn(struct kd_node* kd_root,
-struct feature* feat, int k,
-struct feature*** nbrs, int max_nn_chks,
-    CvRect rect, int model);
+extern int kdtree_bbf_spatial_knn(struct kd_node* kd_root, struct feature* feat, int k,
+        struct feature*** nbrs, int max_nn_chks,
+        CvRect rect, int model);
 
 
 /**

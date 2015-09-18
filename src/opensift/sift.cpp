@@ -123,10 +123,10 @@ int _sift_features(IplImage* img, struct feature** feat, int intvls,
     int octvs, i, n = 0;
 
     /* check arguments */
-    if (!img)
-        fatal_error("NULL pointer error, %s, line %d", __FILE__, __LINE__);
-    if (!feat)
-        fatal_error("NULL pointer error, %s, line %d", __FILE__, __LINE__);
+    if (!img || !feat) {
+        WRITE_ERROR_LOG("NULL pointer error");
+        return -1;
+    }        
 
     /* build scale space pyramid; smallest dimension of top level is ~4 pixels */
     init_img = create_init_img(img, img_dbl, sigma);

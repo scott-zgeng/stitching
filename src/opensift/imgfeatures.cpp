@@ -21,8 +21,6 @@ static void draw_lowe_features(IplImage*, struct feature*, int);
 static void draw_lowe_feature(IplImage*, struct feature*, CvScalar);
 
 
-#define CV_M_PI       3.14159265358979323846
-
 
 
 
@@ -37,12 +35,11 @@ void draw_features(IplImage* img, struct feature* feat, int n)
 {
     int type;
 
-    if (n <= 0 || !feat)
-    {
-        fprintf(stderr, "Warning: no features to draw, %s line %d\n",
-            __FILE__, __LINE__);
+    if (n <= 0 || !feat) {
+        WRITE_WARN_LOG("Warning: no features to draw");            
         return;
     }
+
     type = feat[0].type;
     switch (type)
     {
@@ -53,8 +50,7 @@ void draw_features(IplImage* img, struct feature* feat, int n)
         draw_lowe_features(img, feat, n);
         break;
     default:
-        fprintf(stderr, "Warning: draw_features(): unrecognized feature" \
-            " type, %s, line %d\n", __FILE__, __LINE__);
+        WRITE_WARN_LOG("Warning: draw_features(): unrecognized feature");            
         break;
     }
 }
@@ -134,6 +130,7 @@ static void draw_oxfd_feature(IplImage* img, struct feature* feat,
     cvInitMatHeader(&V, 2, 2, CV_64FC1, v, CV_AUTOSTEP);
     cvInitMatHeader(&E, 2, 1, CV_64FC1, e, CV_AUTOSTEP);
     cvEigenVV(&M, &V, &E, DBL_EPSILON, 0, 0);
+
     l1 = 1 / sqrt(e[1]);
     l2 = 1 / sqrt(e[0]);
     alpha = -atan2(v[1], v[0]);
@@ -148,100 +145,6 @@ static void draw_oxfd_feature(IplImage* img, struct feature* feat,
     cvLine(img, cvPoint(feat->x, feat->y + 2), cvPoint(feat->x, feat->y - 2),
         color, 1, 8, 0);
 }
-
-
-
-/*
-  Reads image features from file.  The file should be formatted as from
-  the code provided by David Lowe:
-
-  http://www.cs.ubc.ca/~lowe/keypoints/
-
-  @param filename location of a file containing image features
-  @param features pointer to an array in which to store features
-
-  @return Returns the number of features imported from filename or -1 on error
-  */
-static int import_lowe_features(char* filename, struct feature** features)
-{
-    struct feature* f;
-    int i, j, n, d;
-    double x, y, s, o, dv;
-    FILE* file;
-
-    if (!features)
-        fatal_error("NULL pointer error, %s, line %d", __FILE__, __LINE__);
-    if (!(file = fopen(filename, "r")))
-    {
-        fprintf(stderr, "Warning: error opening %s, %s, line %d\n",
-            filename, __FILE__, __LINE__);
-        return -1;
-    }
-
-    /* read number of features and dimension */
-    if (fscanf(file, " %d %d ", &n, &d) != 2)
-    {
-        fprintf(stderr, "Warning: file read error, %s, line %d\n",
-            __FILE__, __LINE__);
-        return -1;
-    }
-    if (d > FEATURE_MAX_D)
-    {
-        fprintf(stderr, "Warning: descriptor too long, %s, line %d\n",
-            __FILE__, __LINE__);
-        return -1;
-    }
-
-    f = (struct feature*)calloc(n, sizeof(struct feature));
-    for (i = 0; i < n; i++)
-    {
-        /* read affine region parameters */
-        if (fscanf(file, " %lf %lf %lf %lf ", &y, &x, &s, &o) != 4)
-        {
-            fprintf(stderr, "Warning: error reading feature #%d, %s, line %d\n",
-                i + 1, __FILE__, __LINE__);
-            free(f);
-            return -1;
-        }
-        f[i].img_pt.x = f[i].x = x;
-        f[i].img_pt.y = f[i].y = y;
-        f[i].scl = s;
-        f[i].ori = o;
-        f[i].d = d;
-        f[i].type = FEATURE_LOWE;
-
-        /* read descriptor */
-        for (j = 0; j < d; j++)
-        {
-            if (!fscanf(file, " %lf ", &dv))
-            {
-                fprintf(stderr, "Warning: error reading feature descriptor" \
-                    " #%d, %s, line %d\n", i + 1, __FILE__, __LINE__);
-                free(f);
-                return -1;
-            }
-            f[i].descr[j] = dv;
-        }
-
-        f[i].a = f[i].b = f[i].c = 0;
-        f[i].category = 0;
-        f[i].fwd_match = f[i].bck_match = f[i].mdl_match = NULL;
-        f[i].mdl_pt.x = f[i].mdl_pt.y = -1;
-        f[i].feature_data = NULL;
-    }
-
-    if (fclose(file))
-    {
-        fprintf(stderr, "Warning: file close error, %s, line %d\n",
-            __FILE__, __LINE__);
-        free(f);
-        return -1;
-    }
-
-    *features = f;
-    return n;
-}
-
 
 
 /*

@@ -19,6 +19,7 @@ Copyright (C) 2006-2012  Rob Hess <rob@iqengines.com>
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <time.h>
 
 
 
@@ -29,6 +30,13 @@ Copyright (C) 2006-2012  Rob Hess <rob@iqengines.com>
 
 /*************************** Function Definitions ****************************/
 
+static inline char* time2str(char* ptr)
+{
+    time_t t = time(NULL);
+    tm* curr_time = localtime(&t);
+    sprintf(ptr, "%02d:%02d:%02d", curr_time->tm_hour, curr_time->tm_min, curr_time->tm_sec);
+    return ptr + 8;
+}
 
 static inline char* level2str(char* ptr, int level)
 {
@@ -79,6 +87,8 @@ void write_log(int level, const char* file, int line, const char* format, ...)
     char log[MAX_LOG_LEN + 32];
     char* ptr = log;
 
+    ptr = time2str(ptr);
+    *ptr++ = '|';
     ptr = level2str(ptr, level);   
     *ptr++ = '|';
     ptr = file2str(ptr, file);       
@@ -94,28 +104,6 @@ void write_log(int level, const char* file, int line, const char* format, ...)
     printf(log);
     printf("\n");
 }
-
-
-/*
-  Prints an error message and aborts the program.  The error message is
-  of the form "Error: ...", where the ... is specified by the \a format
-  argument
-
-  @param format an error message format string (as with \c printf(3)).
-  */
-void fatal_error(char* format, ...)
-{
-    va_list ap;
-
-    fprintf(stderr, "Error: ");
-
-    va_start(ap, format);
-    vfprintf(stderr, format, ap);
-    va_end(ap);
-    fprintf(stderr, "\n");
-    abort();
-}
-
 
 
 /*
@@ -338,6 +326,21 @@ extern IplImage* stack_imgs(IplImage* img1, IplImage* img2)
     return stacked;
 }
 
+
+extern IplImage* stack_imgs_horizontal(IplImage* img1, IplImage* img2)
+{
+    
+    IplImage * stacked = cvCreateImage(cvSize(img1->width + img2->width, MAX(img1->height, img2->height)),
+        IPL_DEPTH_8U, 3);
+    cvZero(stacked);
+    cvSetImageROI(stacked, cvRect(0, 0, img1->width, img1->height));
+    cvAdd(img1, stacked, stacked, NULL);
+    cvSetImageROI(stacked, cvRect(img1->width, 0, img2->width, img2->height));
+    cvAdd(img2, stacked, stacked, NULL);
+    cvResetImageROI(stacked);
+
+    return stacked;
+}
 
 
 /*

@@ -15,7 +15,7 @@
 //#include <dirent.h>
 
 
-
+#define CV_M_PI       3.14159265358979323846
 
 #define LOG_LEVEL_NONE 1
 #define LOG_LEVEL_INFO 1
@@ -126,14 +126,6 @@ static inline void setpix64f(IplImage* img, int r, int c, double val)
 /**************************** Function Prototypes ****************************/
 
 
-/**
-   Prints an error message and aborts the program.  The error message is
-   of the form "Error: ...", where the ... is specified by the \a format
-   argument
-
-   @param format an error message format string (as with \c printf(3)).
-   */
-extern void fatal_error(char* format, ...);
 
 
 /**
@@ -238,6 +230,7 @@ extern void draw_x(IplImage* img, CvPoint pt, int r, int w, CvScalar color);
    @return Returns the image resulting from stacking \a img1 on top if \a img2
    */
 extern IplImage* stack_imgs(IplImage* img1, IplImage* img2);
+extern IplImage* stack_imgs_horizontal(IplImage* img1, IplImage* img2);
 
 
 /**

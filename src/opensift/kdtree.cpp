@@ -61,10 +61,8 @@ struct kd_node* kdtree_build(struct feature* features, int n)
 {
     struct kd_node* kd_root;
 
-    if (!features || n <= 0)
-    {
-        fprintf(stderr, "Warning: kdtree_build(): no features, %s, line %d\n",
-            __FILE__, __LINE__);
+    if (!features || n <= 0) {
+        WRITE_WARN_LOG("kdtree_build(): no features");        
         return NULL;
     }
 
@@ -99,10 +97,8 @@ struct feature*** nbrs, int max_nn_chks)
     struct bbf_data* bbf_data;
     int i, t = 0, n = 0;
 
-    if (!nbrs || !feat || !kd_root)
-    {
-        fprintf(stderr, "Warning: NULL pointer error, %s, line %d\n",
-            __FILE__, __LINE__);
+    if (!nbrs || !feat || !kd_root) {
+        WRITE_WARN_LOG("NULL pointer error");        
         return -1;
     }
 
@@ -112,18 +108,14 @@ struct feature*** nbrs, int max_nn_chks)
     while (min_pq->n > 0 && t < max_nn_chks)
     {
         expl = (struct kd_node*)minpq_extract_min(min_pq);
-        if (!expl)
-        {
-            fprintf(stderr, "Warning: PQ unexpectedly empty, %s line %d\n",
-                __FILE__, __LINE__);
+        if (!expl) {
+            WRITE_WARN_LOG("PQ unexpectedly empty");            
             goto fail;
         }
 
         expl = explore_to_leaf(expl, feat, min_pq);
-        if (!expl)
-        {
-            fprintf(stderr, "Warning: PQ unexpectedly empty, %s line %d\n",
-                __FILE__, __LINE__);
+        if (!expl) {
+            WRITE_WARN_LOG("PQ unexpectedly empty");            
             goto fail;
         }
 
@@ -131,10 +123,8 @@ struct feature*** nbrs, int max_nn_chks)
         {
             tree_feat = &expl->features[i];
             bbf_data = (struct bbf_data*)malloc(sizeof(struct bbf_data));
-            if (!bbf_data)
-            {
-                fprintf(stderr, "Warning: unable to allocate memory,"
-                    " %s line %d\n", __FILE__, __LINE__);
+            if (!bbf_data) {
+                WRITE_WARN_LOG("unable to allocate memory");                
                 goto fail;
             }
             bbf_data->old_data = tree_feat->feature_data;
@@ -541,8 +531,7 @@ struct min_pq* min_pq)
 
         if (ki >= feat->d)
         {
-            fprintf(stderr, "Warning: comparing imcompatible descriptors, %s" \
-                " line %d\n", __FILE__, __LINE__);
+            WRITE_WARN_LOG("comparing imcompatible descriptors");            
             return NULL;
         }
         if (feat->descr[ki] <= kv)
@@ -558,8 +547,7 @@ struct min_pq* min_pq)
 
         if (minpq_insert(min_pq, unexpl, ABS(kv - feat->descr[ki])))
         {
-            fprintf(stderr, "Warning: unable to insert into PQ, %s, line %d\n",
-                __FILE__, __LINE__);
+            WRITE_WARN_LOG("unable to insert into PQ");
             return NULL;
         }
     }
