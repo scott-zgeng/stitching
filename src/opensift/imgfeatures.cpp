@@ -13,12 +13,12 @@
 #include <highgui.h>
 
 
-static void draw_oxfd_features(IplImage*, struct feature*, int);
-static void draw_oxfd_feature(IplImage*, struct feature*, CvScalar);
+static void draw_oxfd_features(mv_image_t*, struct feature*, int);
+static void draw_oxfd_feature(mv_image_t*, struct feature*, CvScalar);
 
 
-static void draw_lowe_features(IplImage*, struct feature*, int);
-static void draw_lowe_feature(IplImage*, struct feature*, CvScalar);
+static void draw_lowe_features(mv_image_t*, struct feature*, int);
+static void draw_lowe_feature(mv_image_t*, struct feature*, CvScalar);
 
 
 
@@ -31,7 +31,7 @@ static void draw_lowe_feature(IplImage*, struct feature*, CvScalar);
   @param feat array of Oxford-type features
   @param n number of features
   */
-void draw_features(IplImage* img, struct feature* feat, int n)
+void draw_features(mv_image_t* img, struct feature* feat, int n)
 {
     int type;
 
@@ -96,7 +96,7 @@ double descr_dist_sq(struct feature* f1, struct feature* f2)
   @param feat array of Oxford-type features
   @param n number of features
   */
-static void draw_oxfd_features(IplImage* img, struct feature* feat, int n)
+static void draw_oxfd_features(mv_image_t* img, struct feature* feat, int n)
 {
     CvScalar color = MAKE_CV_RGB(255, 255, 255);
     int i;
@@ -116,13 +116,13 @@ static void draw_oxfd_features(IplImage* img, struct feature* feat, int n)
   @param feat feature to be drawn
   @param color color in which to draw
   */
-static void draw_oxfd_feature(IplImage* img, struct feature* feat,
+static void draw_oxfd_feature(mv_image_t* img, struct feature* feat,
     CvScalar color)
 {
     double m[4] = { feat->a, feat->b, feat->b, feat->c };
     double v[4] = { 0 };
     double e[2] = { 0 };
-    CvMat M, V, E;
+    mv_matrix_t M, V, E;
     double alpha, l1, l2;
 
     /* compute axes and orientation of ellipse surrounding affine region */
@@ -140,9 +140,9 @@ static void draw_oxfd_feature(IplImage* img, struct feature* feat,
         0, 360, MAKE_CV_RGB(0, 0, 0), 3, 8, 0);
     cvEllipse(img, cvPoint(feat->x, feat->y), cvSize(l2, l1), alpha,
         0, 360, color, 1, 8, 0);
-    cvLine(img, cvPoint(feat->x + 2, feat->y), cvPoint(feat->x - 2, feat->y),
+    mv_line(img, cvPoint(feat->x + 2, feat->y), cvPoint(feat->x - 2, feat->y),
         color, 1, 8, 0);
-    cvLine(img, cvPoint(feat->x, feat->y + 2), cvPoint(feat->x, feat->y - 2),
+    mv_line(img, cvPoint(feat->x, feat->y + 2), cvPoint(feat->x, feat->y - 2),
         color, 1, 8, 0);
 }
 
@@ -154,7 +154,7 @@ static void draw_oxfd_feature(IplImage* img, struct feature* feat,
   @param feat array of Oxford-type features
   @param n number of features
   */
-static void draw_lowe_features(IplImage* img, struct feature* feat, int n)
+static void draw_lowe_features(mv_image_t* img, struct feature* feat, int n)
 {
     CvScalar color = MAKE_CV_RGB(255, 255, 255);
     int i;
@@ -173,35 +173,35 @@ Draws a single Lowe-type feature
 @param feat feature to be drawn
 @param color color in which to draw
 */
-static void draw_lowe_feature(IplImage* img, struct feature* feat,
+static void draw_lowe_feature(mv_image_t* img, struct feature* feat,
     CvScalar color)
 {
     int len, hlen, blen, start_x, start_y, end_x, end_y, h1_x, h1_y, h2_x, h2_y;
     double scl, ori;
     double scale = 5.0;
     double hscale = 0.75;
-    CvPoint start, end, h1, h2;
+    mv_point_t start, end, h1, h2;
 
     /* compute points for an arrow scaled and rotated by feat's scl and ori */
-    start_x = cvRound(feat->x);
-    start_y = cvRound(feat->y);
+    start_x = mv_round(feat->x);
+    start_y = mv_round(feat->y);
     scl = feat->scl;
     ori = feat->ori;
-    len = cvRound(scl * scale);
-    hlen = cvRound(scl * hscale);
+    len = mv_round(scl * scale);
+    hlen = mv_round(scl * hscale);
     blen = len - hlen;
-    end_x = cvRound(len *  cos(ori)) + start_x;
-    end_y = cvRound(len * -sin(ori)) + start_y;
-    h1_x = cvRound(blen *  cos(ori + CV_PI / 18.0)) + start_x;
-    h1_y = cvRound(blen * -sin(ori + CV_PI / 18.0)) + start_y;
-    h2_x = cvRound(blen *  cos(ori - CV_PI / 18.0)) + start_x;
-    h2_y = cvRound(blen * -sin(ori - CV_PI / 18.0)) + start_y;
+    end_x = mv_round(len *  cos(ori)) + start_x;
+    end_y = mv_round(len * -sin(ori)) + start_y;
+    h1_x = mv_round(blen *  cos(ori + CV_PI / 18.0)) + start_x;
+    h1_y = mv_round(blen * -sin(ori + CV_PI / 18.0)) + start_y;
+    h2_x = mv_round(blen *  cos(ori - CV_PI / 18.0)) + start_x;
+    h2_y = mv_round(blen * -sin(ori - CV_PI / 18.0)) + start_y;
     start = cvPoint(start_x, start_y);
     end = cvPoint(end_x, end_y);
     h1 = cvPoint(h1_x, h1_y);
     h2 = cvPoint(h2_x, h2_y);
 
-    cvLine(img, start, end, color, 1, 8, 0);
-    cvLine(img, end, h1, color, 1, 8, 0);
-    cvLine(img, end, h2, color, 1, 8, 0);
+    mv_line(img, start, end, color, 1, 8, 0);
+    mv_line(img, end, h1, color, 1, 8, 0);
+    mv_line(img, end, h2, color, 1, 8, 0);
 }

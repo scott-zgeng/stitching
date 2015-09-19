@@ -112,7 +112,7 @@ struct feature;
    @return Returns the number of features stored in \a feat or -1 on failure
    @see _sift_features()
    */
-extern int sift_features(IplImage* img, struct feature** feat);
+extern int sift_features(mv_image_t* img, struct feature** feat);
 
 
 
@@ -143,7 +143,7 @@ extern int sift_features(IplImage* img, struct feature** feat);
    @return Returns the number of keypoints stored in \a feat or -1 on failure
    @see sift_features()
    */
-extern int _sift_features(IplImage* img, struct feature** feat, int intvls,
+extern int _sift_features(mv_image_t* img, struct feature** feat, int intvls,
     double sigma, double contr_thr, int curv_thr,
     int img_dbl, int descr_width, int descr_hist_bins);
 

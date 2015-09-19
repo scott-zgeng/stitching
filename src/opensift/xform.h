@@ -51,7 +51,7 @@ struct ransac_data
    @return Should return a transformation matrix that transforms each point in
    \a pts to the corresponding point in \a mpts or NULL on failure.
    */
-typedef CvMat* (*ransac_xform_fn)(CvPoint2D64f* pts, CvPoint2D64f* mpts,
+typedef mv_matrix_t* (*ransac_xform_fn)(CvPoint2D64f* pts, CvPoint2D64f* mpts,
     int n);
 
 
@@ -68,7 +68,7 @@ typedef CvMat* (*ransac_xform_fn)(CvPoint2D64f* pts, CvPoint2D64f* mpts,
    @return Should return a measure of error between \a mpt and \a pt after
    \a pt has been transformed by the transform \a T.
    */
-typedef double(*ransac_err_fn)(CvPoint2D64f pt, CvPoint2D64f mpt, CvMat* T);
+typedef double(*ransac_err_fn)(CvPoint2D64f pt, CvPoint2D64f mpt, mv_matrix_t* T);
 
 
 /***************************** Function Prototypes ***************************/
@@ -112,7 +112,7 @@ typedef double(*ransac_err_fn)(CvPoint2D64f pt, CvPoint2D64f mpt, CvMat* T);
    @return Returns a transformation matrix computed using RANSAC or NULL
    on error or if an acceptable transform could not be computed.
    */
-extern CvMat* ransac_xform(struct feature* features, int n, int mtype,
+extern mv_matrix_t* ransac_xform(struct feature* features, int n, int mtype,
     ransac_xform_fn xform_fn, int m,
     double p_badxform, ransac_err_fn err_fn,
     double err_tol, struct feature*** inliers,
@@ -132,7 +132,7 @@ extern CvMat* ransac_xform(struct feature* features, int n, int mtype,
    transforms points in \a pts to their corresponding points in \a mpts
    or NULL if fewer than 4 correspondences were provided
    */
-extern CvMat* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n);
+extern mv_matrix_t* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n);
 
 
 /**
@@ -148,7 +148,7 @@ extern CvMat* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n);
    matrix that transforms points in \a pts to their corresponding points
    in \a mpts or NULL if fewer than 4 correspondences were provided
    */
-extern CvMat* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n);
+extern mv_matrix_t* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n);
 
 
 /**
@@ -163,7 +163,7 @@ extern CvMat* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n);
 
    @return Returns the transfer error between \a pt and \a mpt given \a H
    */
-extern double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, CvMat* H);
+extern double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, mv_matrix_t* H);
 
 
 /**
@@ -184,7 +184,7 @@ extern double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, CvMat* H);
 
    @return Returns the point \f$(u, v)\f$ as above.
    */
-extern CvPoint2D64f persp_xform_pt(CvPoint2D64f pt, CvMat* T);
+extern CvPoint2D64f persp_xform_pt(CvPoint2D64f pt, mv_matrix_t* T);
 
 
 #endif

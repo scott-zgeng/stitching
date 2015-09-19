@@ -18,6 +18,8 @@
 
 #include <stdio.h>
 
+#include "mv_base.h"
+
 
 #pragma comment(lib, "opencv_core300d.lib")
 #pragma comment(lib, "opencv_highgui300d.lib")
@@ -46,78 +48,37 @@
 
 
 
-CvPoint leftTop, leftBottom, rightTop, rightBottom;
+mv_point_t leftTop, leftBottom, rightTop, rightBottom;
 
+void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2);
 
-//计算图2的四个角经矩阵H变换后的坐标
-void CalcFourCorner(CvMat * H, IplImage* img2)
-{
-    //计算图2的四个角经矩阵H变换后的坐标
-    double v2[] = { 0, 0, 1 };//左上角
-    double v1[3];//变换后的坐标值
-    CvMat V2 = cvMat(3, 1, CV_64FC1, v2);
-    CvMat V1 = cvMat(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);//矩阵乘法
-    leftTop.x = cvRound(v1[0] / v1[2]);
-    leftTop.y = cvRound(v1[1] / v1[2]);
-    //cvCircle(xformed,leftTop,7,CV_RGB(255,0,0),2);
-
-    //将v2中数据设为左下角坐标
-    v2[0] = 0;
-    v2[1] = img2->height;
-    V2 = cvMat(3, 1, CV_64FC1, v2);
-    V1 = cvMat(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);
-    leftBottom.x = cvRound(v1[0] / v1[2]);
-    leftBottom.y = cvRound(v1[1] / v1[2]);
-    //cvCircle(xformed,leftBottom,7,CV_RGB(255,0,0),2);
-
-    //将v2中数据设为右上角坐标
-    v2[0] = img2->width;
-    v2[1] = 0;
-    V2 = cvMat(3, 1, CV_64FC1, v2);
-    V1 = cvMat(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);
-    rightTop.x = cvRound(v1[0] / v1[2]);
-    rightTop.y = cvRound(v1[1] / v1[2]);
-    //cvCircle(xformed,rightTop,7,CV_RGB(255,0,0),2);
-
-    //将v2中数据设为右下角坐标
-    v2[0] = img2->width;
-    v2[1] = img2->height;
-    V2 = cvMat(3, 1, CV_64FC1, v2);
-    V1 = cvMat(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);
-    rightBottom.x = cvRound(v1[0] / v1[2]);
-    rightBottom.y = cvRound(v1[1] / v1[2]);
-    //cvCircle(xformed,rightBottom,7,CV_RGB(255,0,0),2);
-
-}
 
 int main(int argc, char** argv)
 {
     WRITE_INFO_LOG("enter main function");
 
-    IplImage* img1, *img2, *stacked;
+    mv_image_t* img1, *img2, *stacked;
     struct feature* feat1, *feat2, *feat;
     struct feature** nbrs;
     struct kd_node* kd_root;
-    CvPoint pt1, pt2;
+    mv_point_t pt1, pt2;
     double d0, d1;
     int n1, n2, k, i, m = 0;
 
-
+    
+    //const char* imgfile1 = "img_left.jpg";
+    //const char* imgfile2 = "img_right.jpg";
     const char* imgfile1 = "g1.jpg";
     const char* imgfile2 = "g2.jpg";
 
 
-    img1 = cvLoadImage(imgfile1, 1);
+    img1 = mv_load_image(imgfile1, 1);
     if (!img1) {
         WRITE_ERROR_LOG("unable to load image from %s", imgfile1);
         return 1;
     }
 
-    img2 = cvLoadImage(imgfile2, 1);
+    img2 = mv_load_image(imgfile2, 1);    
     if (!img2) {
         WRITE_ERROR_LOG("unable to load image from %s", imgfile2);
         return 1;
@@ -145,10 +106,10 @@ int main(int argc, char** argv)
             d1 = descr_dist_sq(feat, nbrs[1]);
             if (d0 < d1 * NN_SQ_DIST_RATIO_THR)
             {
-                pt1 = cvPoint(cvRound(feat->x), cvRound(feat->y));
-                pt2 = cvPoint(cvRound(nbrs[0]->x), cvRound(nbrs[0]->y));
+                pt1 = mv_point_t(mv_round(feat->x), mv_round(feat->y));
+                pt2 = mv_point_t(mv_round(nbrs[0]->x), mv_round(nbrs[0]->y));
                 pt2.y += img1->height;
-                cvLine(stacked, pt1, pt2, CV_RGB(255, 0, 255), 1, 8, 0);
+                mv_line(stacked, pt1, pt2, MV_RGB(255, 0, 255), 1, 8, 0);
                 m++;
                 feat2[i].fwd_match = nbrs[0];
             }
@@ -158,7 +119,7 @@ int main(int argc, char** argv)
 
     WRITE_INFO_LOG("Found %d total matches", m);
     display_big_img(stacked, "Matches");
-    cvWaitKey(0);
+    mv_wait_key(0);
 
     /*
        UNCOMMENT BELOW TO SEE HOW RANSAC FUNCTION WORKS
@@ -168,13 +129,13 @@ int main(int argc, char** argv)
        */
 
 
-    CvMat* H;
-    IplImage* xformed;
+    mv_matrix_t* H;
+    mv_image_t* xformed;
     struct feature **inliers;
     int n_inliers;
 
     H = ransac_xform(feat2, n2, FEATURE_FWD_MATCH, lsq_homog, 4, 0.01, homog_xfer_err, 3.0, &inliers, &n_inliers);
-    IplImage *stacked_ransac;
+    mv_image_t *stacked_ransac;
 
     //若能成功计算出变换矩阵，即两幅图中有共同区域
     if (H)
@@ -192,8 +153,8 @@ int main(int argc, char** argv)
         for (int i = 0; i<n_inliers; i++)
         {
             feat = inliers[i];//第i个特征点
-            pt2 = CvPoint(cvRound(feat->x), cvRound(feat->y));//图2中点的坐标
-            pt1 = CvPoint(cvRound(feat->fwd_match->x), cvRound(feat->fwd_match->y));//图1中点的坐标(feat的匹配点)
+            pt2 = mv_point_t(mv_round(feat->x), mv_round(feat->y));//图2中点的坐标
+            pt1 = mv_point_t(mv_round(feat->fwd_match->x), mv_round(feat->fwd_match->y));//图1中点的坐标(feat的匹配点)
             //qDebug()<<"pt2:("<<pt2.x<<","<<pt2.y<<")--->pt1:("<<pt1.x<<","<<pt1.y<<")";//输出对应点对
 
             /*找匹配点区域的边界
@@ -207,7 +168,7 @@ int main(int argc, char** argv)
                 invertNum++;
             
             pt2.x += img1->width;//由于两幅图是左右排列的，pt2的横坐标加上图1的宽度，作为连线的终点
-            cvLine(stacked_ransac, pt1, pt2, CV_RGB(255, 0, 255), 1, 8, 0);//在匹配图上画出连线
+            mv_line(stacked_ransac, pt1, pt2, MV_RGB(255, 0, 255), 1, 8, 0);//在匹配图上画出连线
         }
 
         //绘制图1中包围匹配点的矩形
@@ -217,7 +178,7 @@ int main(int argc, char** argv)
 
         cvNamedWindow(IMG_MATCH2);//创建窗口
         cvShowImage(IMG_MATCH2, stacked_ransac);//显示经RANSAC算法筛选后的匹配图
-        cvWaitKey(0);
+        mv_wait_key(0);
 
 
         //保存匹配图
@@ -235,7 +196,7 @@ int main(int argc, char** argv)
         if (invertNum > n_inliers * 0.8)
         {
             
-            CvMat * H_IVT = cvCreateMat(3, 3, CV_64FC1);//变换矩阵的逆矩阵
+            mv_matrix_t * H_IVT = cvCreateMat(3, 3, CV_64FC1);//变换矩阵的逆矩阵
             //求H的逆阵H_IVT时，若成功求出，返回非零值
             if (cvInvert(H, H_IVT))
             {
@@ -244,7 +205,7 @@ int main(int argc, char** argv)
                 H = cvCloneMat(H_IVT);//将H的逆阵H_IVT中的数据拷贝到H中
                 cvReleaseMat(&H_IVT);//释放逆阵H_IVT
                 //将img1和img2对调
-                IplImage * temp = img2;
+                mv_image_t * temp = img2;
                 img2 = img1;
                 img1 = temp;
                 //cvShowImage(IMG1,img1);
@@ -271,21 +232,21 @@ int main(int argc, char** argv)
         cvWarpPerspective(img2, xformed, H, CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS, cvScalarAll(0));
         cvNamedWindow(IMG_MOSAIC_TEMP); //显示临时图,即只将图2变换后的图
         cvShowImage(IMG_MOSAIC_TEMP, xformed);
-        cvWaitKey(0);
+        mv_wait_key(0);
 
 
         //简易拼接法：直接将将左图img1叠加到xformed的左边
-        IplImage* xformed_simple = cvCloneImage(xformed);//简易拼接图，可笼子xformed
+        mv_image_t* xformed_simple = cvCloneImage(xformed);//简易拼接图，可笼子xformed
         cvSetImageROI(xformed_simple, cvRect(0, 0, img1->width, img1->height));
         cvAddWeighted(img1, 1, xformed_simple, 0, 0, xformed_simple);
         cvResetImageROI(xformed_simple);
         cvNamedWindow(IMG_MOSAIC_SIMPLE);//创建窗口
         cvShowImage(IMG_MOSAIC_SIMPLE, xformed_simple);//显示简易拼接图
-        cvWaitKey(0);
+        mv_wait_key(0);
 
 
         //处理后的拼接图，克隆自xformed
-        IplImage* xformed_proc = cvCloneImage(xformed);
+        mv_image_t* xformed_proc = cvCloneImage(xformed);
 
         //重叠区域左边的部分完全取自图1
         cvSetImageROI(img1, cvRect(0, 0, MIN(leftTop.x, leftBottom.x), xformed_proc->height));
@@ -297,7 +258,7 @@ int main(int argc, char** argv)
         cvResetImageROI(xformed_proc);
         cvNamedWindow(IMG_MOSAIC_BEFORE_FUSION);
         cvShowImage(IMG_MOSAIC_BEFORE_FUSION, xformed_proc);//显示融合之前的拼接图
-        cvWaitKey(0);
+        mv_wait_key(0);
 
         //采用加权平均的方法融合重叠区域
         int start = MIN(leftTop.x, leftBottom.x);//开始位置，即重叠区域的左边界
@@ -326,7 +287,7 @@ int main(int argc, char** argv)
         }
         cvNamedWindow(IMG_MOSAIC_PROC);//创建窗口
         cvShowImage(IMG_MOSAIC_PROC, xformed_proc);//显示处理后的拼接图
-        cvWaitKey(0);
+        mv_wait_key(0);
 
         //*重叠区域取两幅图像的平均值，效果不好
         //设置ROI，是包含重叠区域的矩形
@@ -364,4 +325,51 @@ int main(int argc, char** argv)
     free(feat1);
     free(feat2);
     return 0;
+}
+
+
+
+//计算图2的四个角经矩阵H变换后的坐标
+void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
+{
+    //计算图2的四个角经矩阵H变换后的坐标
+    double v2[] = { 0, 0, 1 };//左上角
+    double v1[3];//变换后的坐标值
+    mv_matrix_t V2(3, 1, CV_64FC1, v2);
+    mv_matrix_t V1(3, 1, CV_64FC1, v1);
+    cvGEMM(H, &V2, 1, 0, 1, &V1);//矩阵乘法
+    leftTop.x = mv_round(v1[0] / v1[2]);
+    leftTop.y = mv_round(v1[1] / v1[2]);
+    //cvCircle(xformed,leftTop,7,CV_RGB(255,0,0),2);
+
+    //将v2中数据设为左下角坐标
+    v2[0] = 0;
+    v2[1] = img2->height;
+    V2 = cvMat(3, 1, CV_64FC1, v2);
+    V1 = cvMat(3, 1, CV_64FC1, v1);
+    cvGEMM(H, &V2, 1, 0, 1, &V1);
+    leftBottom.x = mv_round(v1[0] / v1[2]);
+    leftBottom.y = mv_round(v1[1] / v1[2]);
+    //cvCircle(xformed,leftBottom,7,CV_RGB(255,0,0),2);
+
+    //将v2中数据设为右上角坐标
+    v2[0] = img2->width;
+    v2[1] = 0;
+    V2 = cvMat(3, 1, CV_64FC1, v2);
+    V1 = cvMat(3, 1, CV_64FC1, v1);
+    cvGEMM(H, &V2, 1, 0, 1, &V1);
+    rightTop.x = mv_round(v1[0] / v1[2]);
+    rightTop.y = mv_round(v1[1] / v1[2]);
+    //cvCircle(xformed,rightTop,7,CV_RGB(255,0,0),2);
+
+    //将v2中数据设为右下角坐标
+    v2[0] = img2->width;
+    v2[1] = img2->height;
+    V2 = cvMat(3, 1, CV_64FC1, v2);
+    V1 = cvMat(3, 1, CV_64FC1, v1);
+    cvGEMM(H, &V2, 1, 0, 1, &V1);
+    rightBottom.x = mv_round(v1[0] / v1[2]);
+    rightBottom.y = mv_round(v1[1] / v1[2]);
+    //cvCircle(xformed,rightBottom,7,CV_RGB(255,0,0),2);
+
 }

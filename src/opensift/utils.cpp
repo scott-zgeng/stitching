@@ -8,9 +8,9 @@ Copyright (C) 2006-2012  Rob Hess <rob@iqengines.com>
 
 #include "utils.h"
 
-#include <cv.h>
-#include <cxcore.h>
-#include <highgui.h>
+//#include <cv.h>
+//#include <cxcore.h>
+//#include <highgui.h>
 
 //#include <gdk/gdk.h>
 //#include <gtk/gtk.h>
@@ -20,6 +20,8 @@ Copyright (C) 2006-2012  Rob Hess <rob@iqengines.com>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <time.h>
+
+#include "../mv_base.h"
 
 
 
@@ -292,12 +294,12 @@ double dist_sq_2D(CvPoint2D64f p1, CvPoint2D64f p2)
   @param w the x's line weight
   @param color the color of the x
   */
-void draw_x(IplImage* img, CvPoint pt, int r, int w, CvScalar color)
+void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, CvScalar color)
 {
-    cvLine(img, pt, cvPoint(pt.x + r, pt.y + r), color, w, 8, 0);
-    cvLine(img, pt, cvPoint(pt.x - r, pt.y + r), color, w, 8, 0);
-    cvLine(img, pt, cvPoint(pt.x + r, pt.y - r), color, w, 8, 0);
-    cvLine(img, pt, cvPoint(pt.x - r, pt.y - r), color, w, 8, 0);
+    mv_line(img, pt, cvPoint(pt.x + r, pt.y + r), color, w, 8, 0);
+    mv_line(img, pt, cvPoint(pt.x - r, pt.y + r), color, w, 8, 0);
+    mv_line(img, pt, cvPoint(pt.x + r, pt.y - r), color, w, 8, 0);
+    mv_line(img, pt, cvPoint(pt.x - r, pt.y - r), color, w, 8, 0);
 }
 
 
@@ -310,9 +312,9 @@ void draw_x(IplImage* img, CvPoint pt, int r, int w, CvScalar color)
 
   @return Returns the image resulting from stacking \a img1 on top if \a img2
   */
-extern IplImage* stack_imgs(IplImage* img1, IplImage* img2)
+extern mv_image_t* stack_imgs(mv_image_t* img1, mv_image_t* img2)
 {
-    IplImage* stacked = cvCreateImage(cvSize(MAX(img1->width, img2->width),
+    mv_image_t* stacked = cvCreateImage(cvSize(MAX(img1->width, img2->width),
         img1->height + img2->height),
         IPL_DEPTH_8U, 3);
 
@@ -327,10 +329,10 @@ extern IplImage* stack_imgs(IplImage* img1, IplImage* img2)
 }
 
 
-extern IplImage* stack_imgs_horizontal(IplImage* img1, IplImage* img2)
+extern mv_image_t* stack_imgs_horizontal(mv_image_t* img1, mv_image_t* img2)
 {
     
-    IplImage * stacked = cvCreateImage(cvSize(img1->width + img2->width, MAX(img1->height, img2->height)),
+    mv_image_t * stacked = cvCreateImage(cvSize(img1->width + img2->width, MAX(img1->height, img2->height)),
         IPL_DEPTH_8U, 3);
     cvZero(stacked);
     cvSetImageROI(stacked, cvRect(0, 0, img1->width, img1->height));
@@ -351,9 +353,9 @@ extern IplImage* stack_imgs_horizontal(IplImage* img1, IplImage* img2)
   @param img an image, possibly too large to display on-screen
   @param title the title of the window in which \a img is displayed
   */
-void display_big_img(IplImage* img, char* title)
+void display_big_img(mv_image_t* img, char* title)
 {
-    IplImage* small;
+    mv_image_t* small;
     //GdkScreen* scr;
     int scr_width, scr_height;
     double img_aspect, scr_aspect, scale;
@@ -410,7 +412,7 @@ void display_big_img(IplImage* img, char* title)
   @param n number of images in \a imgs
   @param win_name name of window in which images are displayed
   */
-void vid_view(IplImage** imgs, int n, char* win_name)
+void vid_view(mv_image_t** imgs, int n, char* win_name)
 {
     int k, i = 0, playing = 0;
 
@@ -422,14 +424,14 @@ void vid_view(IplImage** imgs, int n, char* win_name)
         {
             i = MIN(i + 1, n - 1);
             display_big_img(imgs[i], win_name);
-            k = cvWaitKey(33);
+            k = mv_wait_key(33);
             if (k == ' ' || i == n - 1)
                 playing = 0;
         }
 
         else
         {
-            k = cvWaitKey(0);
+            k = mv_wait_key(0);
             switch (k)
             {
                 /* space */

@@ -25,7 +25,7 @@ static inline double log_factorial(int);
 static struct feature** draw_ransac_sample(struct feature**, int, int);
 static void extract_corresp_pts(struct feature**, int, int, CvPoint2D64f**,
     CvPoint2D64f**);
-static int find_consensus(struct feature**, int, int, CvMat*, ransac_err_fn,
+static int find_consensus(struct feature**, int, int, mv_matrix_t*, ransac_err_fn,
     double, struct feature***);
 static inline void release_mem(CvPoint2D64f*, CvPoint2D64f*,
 struct feature**);
@@ -79,7 +79,7 @@ struct feature*** inliers, int* n_in)
     struct feature** matched, ** sample, ** consensus, ** consensus_max = NULL;
     struct ransac_data* rdata;
     CvPoint2D64f* pts, *mpts;
-    CvMat* M = NULL;
+    mv_matrix_t* M = NULL;
     double p, in_frac = RANSAC_INLIER_FRAC_EST;
     int i, nm, in, in_min, in_max = 0, k = 0;
 
@@ -175,9 +175,9 @@ end:
   in pts to their corresponding points in mpts or NULL if fewer than 4
   correspondences were provided
   */
-CvMat* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
+mv_matrix_t* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
 {
-    CvMat* H, *A, *VT, *D, h, v9;
+    mv_matrix_t* H, *A, *VT, *D, h, v9;
     double _h[9];
     int i;
 
@@ -233,9 +233,9 @@ CvMat* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
   transforms points in pts to their corresponding points in mpts or NULL if
   fewer than 4 correspondences were provided
   */
-CvMat* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
+mv_matrix_t* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
 {
-    CvMat* H, *A, *B, X;
+    mv_matrix_t* H, *A, *B, X;
     double x[9];
     int i;
 
@@ -290,7 +290,7 @@ CvMat* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
 
   @return Returns the transfer error between pt and mpt given H
   */
-double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, CvMat* H)
+double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, mv_matrix_t* H)
 {
     CvPoint2D64f xpt = persp_xform_pt(pt, H);
 
@@ -317,9 +317,9 @@ double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, CvMat* H)
 
   @return Returns the point (u, v) as above.
   */
-CvPoint2D64f persp_xform_pt(CvPoint2D64f pt, CvMat* T)
+CvPoint2D64f persp_xform_pt(CvPoint2D64f pt, mv_matrix_t* T)
 {
-    CvMat XY, UV;
+    mv_matrix_t XY, UV;
     double xy[3] = { pt.x, pt.y, 1.0 }, uv[3] = { 0 };
     CvPoint2D64f rslt;
 
@@ -572,7 +572,7 @@ static void extract_corresp_pts(struct feature** features, int n, int mtype,
   @return Returns the number of points in the consensus set
   */
 static int find_consensus(struct feature** features, int n, int mtype,
-    CvMat* M, ransac_err_fn err_fn, double err_tol,
+    mv_matrix_t* M, ransac_err_fn err_fn, double err_tol,
 struct feature*** consensus)
 {
     struct feature** _consensus;
