@@ -7,14 +7,18 @@
   @version 1.1.2-20100521
   */
 
+
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
+
+
 #include "xform.h"
 #include "imgfeatures.h"
 #include "utils.h"
 
-#include <cxcore.h>
 
-#include <stdlib.h>
-#include <time.h>
 
 /************************* Local Function Prototypes *************************/
 
@@ -23,11 +27,11 @@ static int get_matched_features(struct feature*, int, int, struct feature***);
 static int calc_min_inliers(int, int, double, double);
 static inline double log_factorial(int);
 static struct feature** draw_ransac_sample(struct feature**, int, int);
-static void extract_corresp_pts(struct feature**, int, int, CvPoint2D64f**,
-    CvPoint2D64f**);
+static void extract_corresp_pts(struct feature**, int, int, mv_point_d_t**,
+    mv_point_d_t**);
 static int find_consensus(struct feature**, int, int, mv_matrix_t*, ransac_err_fn,
     double, struct feature***);
-static inline void release_mem(CvPoint2D64f*, CvPoint2D64f*,
+static inline void release_mem(mv_point_d_t*, mv_point_d_t*,
 struct feature**);
 
 /********************** Functions prototyped in model.h **********************/
@@ -71,14 +75,15 @@ struct feature**);
   @return Returns a transformation matrix computed using RANSAC or NULL
   on error or if an acceptable transform could not be computed.
   */
-CvMat* ransac_xform(struct feature* features, int n, int mtype,
+mv_matrix_t* ransac_xform(struct feature* features, int n, int mtype,
     ransac_xform_fn xform_fn, int m, double p_badxform,
     ransac_err_fn err_fn, double err_tol,
-struct feature*** inliers, int* n_in)
+    struct feature*** inliers, int* n_in)
+
 {
     struct feature** matched, ** sample, ** consensus, ** consensus_max = NULL;
     struct ransac_data* rdata;
-    CvPoint2D64f* pts, *mpts;
+    mv_point_d_t* pts, *mpts;
     mv_matrix_t* M = NULL;
     double p, in_frac = RANSAC_INLIER_FRAC_EST;
     int i, nm, in, in_min, in_max = 0, k = 0;
@@ -114,7 +119,7 @@ struct feature*** inliers, int* n_in)
         }
         else
             free(consensus);
-        cvReleaseMat(&M);
+        mv_release_matrix(&M);
 
     iteration_end:
         release_mem(pts, mpts, sample);
@@ -127,7 +132,7 @@ struct feature*** inliers, int* n_in)
         extract_corresp_pts(consensus_max, in_max, mtype, &pts, &mpts);
         M = xform_fn(pts, mpts, in_max);
         in = find_consensus(matched, nm, mtype, M, err_fn, err_tol, &consensus);
-        cvReleaseMat(&M);
+        mv_release_matrix(&M);
         release_mem(pts, mpts, consensus_max);
         extract_corresp_pts(consensus, in, mtype, &pts, &mpts);
         M = xform_fn(pts, mpts, in);
@@ -175,7 +180,7 @@ end:
   in pts to their corresponding points in mpts or NULL if fewer than 4
   correspondences were provided
   */
-mv_matrix_t* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
+mv_matrix_t* dlt_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
 {
     mv_matrix_t* H, *A, *VT, *D, h, v9;
     double _h[9];
@@ -185,37 +190,37 @@ mv_matrix_t* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
         return NULL;
 
     /* set up matrices so we can unstack homography into h; Ah = 0 */
-    A = cvCreateMat(2 * n, 9, CV_64FC1);
-    cvZero(A);
+    A = mv_create_matrix(2 * n, 9, CV_64FC1);
+    mv_matrix_zero(A);
     for (i = 0; i < n; i++)
     {
-        cvmSet(A, 2 * i, 3, -pts[i].x);
-        cvmSet(A, 2 * i, 4, -pts[i].y);
-        cvmSet(A, 2 * i, 5, -1.0);
-        cvmSet(A, 2 * i, 6, mpts[i].y * pts[i].x);
-        cvmSet(A, 2 * i, 7, mpts[i].y * pts[i].y);
-        cvmSet(A, 2 * i, 8, mpts[i].y);
-        cvmSet(A, 2 * i + 1, 0, pts[i].x);
-        cvmSet(A, 2 * i + 1, 1, pts[i].y);
-        cvmSet(A, 2 * i + 1, 2, 1.0);
-        cvmSet(A, 2 * i + 1, 6, -mpts[i].x * pts[i].x);
-        cvmSet(A, 2 * i + 1, 7, -mpts[i].x * pts[i].y);
-        cvmSet(A, 2 * i + 1, 8, -mpts[i].x);
+        mv_matrix_set(A, 2 * i, 3, -pts[i].x);
+        mv_matrix_set(A, 2 * i, 4, -pts[i].y);
+        mv_matrix_set(A, 2 * i, 5, -1.0);
+        mv_matrix_set(A, 2 * i, 6, mpts[i].y * pts[i].x);
+        mv_matrix_set(A, 2 * i, 7, mpts[i].y * pts[i].y);
+        mv_matrix_set(A, 2 * i, 8, mpts[i].y);
+        mv_matrix_set(A, 2 * i + 1, 0, pts[i].x);
+        mv_matrix_set(A, 2 * i + 1, 1, pts[i].y);
+        mv_matrix_set(A, 2 * i + 1, 2, 1.0);
+        mv_matrix_set(A, 2 * i + 1, 6, -mpts[i].x * pts[i].x);
+        mv_matrix_set(A, 2 * i + 1, 7, -mpts[i].x * pts[i].y);
+        mv_matrix_set(A, 2 * i + 1, 8, -mpts[i].x);
     }
-    D = cvCreateMat(9, 9, CV_64FC1);
-    VT = cvCreateMat(9, 9, CV_64FC1);
-    cvSVD(A, D, NULL, VT, CV_SVD_MODIFY_A + CV_SVD_V_T);
-    v9 = cvMat(1, 9, CV_64FC1, NULL);
-    cvGetRow(VT, &v9, 8);
-    h = cvMat(1, 9, CV_64FC1, _h);
-    cvCopy(&v9, &h, NULL);
-    h = cvMat(3, 3, CV_64FC1, _h);
-    H = cvCreateMat(3, 3, CV_64FC1);
-    cvConvert(&h, H);
+    D = mv_create_matrix(9, 9, CV_64FC1);
+    VT = mv_create_matrix(9, 9, CV_64FC1);
+    mv_svd(A, D, NULL, VT, CV_SVD_MODIFY_A + CV_SVD_V_T);
+    v9 = mv_matrix_t(1, 9, CV_64FC1, NULL);
+    mv_get_row(VT, &v9, 8);
+    h = mv_matrix_t(1, 9, CV_64FC1, _h);
+    mv_copy(&v9, &h, NULL);
+    h = mv_matrix_t(3, 3, CV_64FC1, _h);
+    H = mv_create_matrix(3, 3, CV_64FC1);
+    mv_convert(&h, H);
 
-    cvReleaseMat(&A);
-    cvReleaseMat(&D);
-    cvReleaseMat(&VT);
+    mv_release_matrix(&A);
+    mv_release_matrix(&D);
+    mv_release_matrix(&VT);
     return H;
 }
 
@@ -233,7 +238,7 @@ mv_matrix_t* dlt_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
   transforms points in pts to their corresponding points in mpts or NULL if
   fewer than 4 correspondences were provided
   */
-mv_matrix_t* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
+mv_matrix_t* lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
 {
     mv_matrix_t* H, *A, *B, X;
     double x[9];
@@ -247,33 +252,33 @@ mv_matrix_t* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
     }
 
     /* set up matrices so we can unstack homography into X; AX = B */
-    A = cvCreateMat(2 * n, 8, CV_64FC1);
-    B = cvCreateMat(2 * n, 1, CV_64FC1);
-    X = cvMat(8, 1, CV_64FC1, x);
-    H = cvCreateMat(3, 3, CV_64FC1);
-    cvZero(A);
+    A = mv_create_matrix(2 * n, 8, CV_64FC1);
+    B = mv_create_matrix(2 * n, 1, CV_64FC1);
+    X = mv_matrix_t(8, 1, CV_64FC1, x);
+    H = mv_create_matrix(3, 3, CV_64FC1);
+    mv_matrix_zero(A);
     for (i = 0; i < n; i++)
     {
-        cvmSet(A, i, 0, pts[i].x);
-        cvmSet(A, i + n, 3, pts[i].x);
-        cvmSet(A, i, 1, pts[i].y);
-        cvmSet(A, i + n, 4, pts[i].y);
-        cvmSet(A, i, 2, 1.0);
-        cvmSet(A, i + n, 5, 1.0);
-        cvmSet(A, i, 6, -pts[i].x * mpts[i].x);
-        cvmSet(A, i, 7, -pts[i].y * mpts[i].x);
-        cvmSet(A, i + n, 6, -pts[i].x * mpts[i].y);
-        cvmSet(A, i + n, 7, -pts[i].y * mpts[i].y);
-        cvmSet(B, i, 0, mpts[i].x);
-        cvmSet(B, i + n, 0, mpts[i].y);
+        mv_matrix_set(A, i, 0, pts[i].x);
+        mv_matrix_set(A, i + n, 3, pts[i].x);
+        mv_matrix_set(A, i, 1, pts[i].y);
+        mv_matrix_set(A, i + n, 4, pts[i].y);
+        mv_matrix_set(A, i, 2, 1.0);
+        mv_matrix_set(A, i + n, 5, 1.0);
+        mv_matrix_set(A, i, 6, -pts[i].x * mpts[i].x);
+        mv_matrix_set(A, i, 7, -pts[i].y * mpts[i].x);
+        mv_matrix_set(A, i + n, 6, -pts[i].x * mpts[i].y);
+        mv_matrix_set(A, i + n, 7, -pts[i].y * mpts[i].y);
+        mv_matrix_set(B, i, 0, mpts[i].x);
+        mv_matrix_set(B, i + n, 0, mpts[i].y);
     }
-    cvSolve(A, B, &X, CV_SVD);
+    mv_solve(A, B, &X, CV_SVD);
     x[8] = 1.0;
-    X = cvMat(3, 3, CV_64FC1, x);
-    cvConvert(&X, H);
+    X = mv_matrix_t(3, 3, CV_64FC1, x);
+    mv_convert(&X, H);
 
-    cvReleaseMat(&A);
-    cvReleaseMat(&B);
+    mv_release_matrix(&A);
+    mv_release_matrix(&B);
     return H;
 }
 
@@ -290,9 +295,9 @@ mv_matrix_t* lsq_homog(CvPoint2D64f* pts, CvPoint2D64f* mpts, int n)
 
   @return Returns the transfer error between pt and mpt given H
   */
-double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, mv_matrix_t* H)
+double homog_xfer_err(mv_point_d_t pt, mv_point_d_t mpt, mv_matrix_t* H)
 {
-    CvPoint2D64f xpt = persp_xform_pt(pt, H);
+    mv_point_d_t xpt = persp_xform_pt(pt, H);
 
     return sqrt(dist_sq_2D(xpt, mpt));
 }
@@ -317,16 +322,16 @@ double homog_xfer_err(CvPoint2D64f pt, CvPoint2D64f mpt, mv_matrix_t* H)
 
   @return Returns the point (u, v) as above.
   */
-CvPoint2D64f persp_xform_pt(CvPoint2D64f pt, mv_matrix_t* T)
+mv_point_d_t persp_xform_pt(mv_point_d_t pt, mv_matrix_t* T)
 {
     mv_matrix_t XY, UV;
     double xy[3] = { pt.x, pt.y, 1.0 }, uv[3] = { 0 };
-    CvPoint2D64f rslt;
+    mv_point_d_t rslt;
 
-    cvInitMatHeader(&XY, 3, 1, CV_64FC1, xy, CV_AUTOSTEP);
-    cvInitMatHeader(&UV, 3, 1, CV_64FC1, uv, CV_AUTOSTEP);
-    cvMatMul(T, &XY, &UV);
-    rslt = cvPoint2D64f(uv[0] / uv[2], uv[1] / uv[2]);
+    mv_init_matrix_header(&XY, 3, 1, CV_64FC1, xy, CV_AUTOSTEP);
+    mv_init_matrix_header(&UV, 3, 1, CV_64FC1, uv, CV_AUTOSTEP);
+    mv_matrix_mul(T, &XY, &UV);
+    rslt = mv_point_d_t(uv[0] / uv[2], uv[1] / uv[2]);
 
     return rslt;
 }
@@ -449,7 +454,7 @@ static inline double log_factorial(int n)
     int i;
 
     for (i = 1; i <= n; i++)
-        f += log(i);
+        f += log((double)i);
 
     return f;
 }
@@ -510,14 +515,14 @@ static struct feature** draw_ransac_sample(struct feature** features, int n,
   @param mpts output as an array of raw point locations from features' matches
   */
 static void extract_corresp_pts(struct feature** features, int n, int mtype,
-    CvPoint2D64f** pts, CvPoint2D64f** mpts)
+    mv_point_d_t** pts, mv_point_d_t** mpts)
 {
     struct feature* match;
-    CvPoint2D64f* _pts, *_mpts;
+    mv_point_d_t* _pts, *_mpts;
     int i;
 
-    _pts = (CvPoint2D64f*)calloc(n, sizeof(CvPoint2D64f));
-    _mpts = (CvPoint2D64f*)calloc(n, sizeof(CvPoint2D64f));
+    _pts = (mv_point_d_t*)calloc(n, sizeof(mv_point_d_t));
+    _mpts = (mv_point_d_t*)calloc(n, sizeof(mv_point_d_t));
 
     if (mtype == FEATURE_MDL_MATCH)
     for (i = 0; i < n; i++)
@@ -577,7 +582,7 @@ struct feature*** consensus)
 {
     struct feature** _consensus;
     struct feature* match;
-    CvPoint2D64f pt, mpt;
+    mv_point_d_t pt, mpt;
     double err;
     int i, in = 0;
 
@@ -627,7 +632,7 @@ struct feature*** consensus)
   @param pts2 an array of points
   @param features an array of pointers to features; can be NULL
   */
-static inline void release_mem(CvPoint2D64f* pts1, CvPoint2D64f* pts2,
+static inline void release_mem(mv_point_d_t* pts1, mv_point_d_t* pts2,
 struct feature** features)
 {
     free(pts1);

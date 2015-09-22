@@ -18,7 +18,7 @@
 #ifndef KDTREE_H
 #define KDTREE_H
 
-#include "cxcore.h"
+#include "../mv_base.h"
 
 
 /********************************* Structures ********************************/
@@ -97,7 +97,7 @@ extern int kdtree_bbf_knn(struct kd_node* kd_root, struct feature* feat,
    */
 extern int kdtree_bbf_spatial_knn(struct kd_node* kd_root, struct feature* feat, int k,
         struct feature*** nbrs, int max_nn_chks,
-        CvRect rect, int model);
+        mv_rect_t rect, int model);
 
 
 /**

@@ -6,19 +6,21 @@
   @version 1.1.2-20100521
   */
 
+
+#include <math.h>
+#include <float.h>
+
 #include "utils.h"
 #include "imgfeatures.h"
 
-#include <cxcore.h>
-#include <highgui.h>
 
 
 static void draw_oxfd_features(mv_image_t*, struct feature*, int);
-static void draw_oxfd_feature(mv_image_t*, struct feature*, CvScalar);
+static void draw_oxfd_feature(mv_image_t*, struct feature*, mv_scalar_t);
 
 
 static void draw_lowe_features(mv_image_t*, struct feature*, int);
-static void draw_lowe_feature(mv_image_t*, struct feature*, CvScalar);
+static void draw_lowe_feature(mv_image_t*, struct feature*, mv_scalar_t);
 
 
 
@@ -98,7 +100,7 @@ double descr_dist_sq(struct feature* f1, struct feature* f2)
   */
 static void draw_oxfd_features(mv_image_t* img, struct feature* feat, int n)
 {
-    CvScalar color = MAKE_CV_RGB(255, 255, 255);
+    mv_scalar_t color = MV_RGB(255, 255, 255);
     int i;
 
     if (img->nChannels > 1)
@@ -117,7 +119,7 @@ static void draw_oxfd_features(mv_image_t* img, struct feature* feat, int n)
   @param color color in which to draw
   */
 static void draw_oxfd_feature(mv_image_t* img, struct feature* feat,
-    CvScalar color)
+    mv_scalar_t color)
 {
     double m[4] = { feat->a, feat->b, feat->b, feat->c };
     double v[4] = { 0 };
@@ -126,23 +128,23 @@ static void draw_oxfd_feature(mv_image_t* img, struct feature* feat,
     double alpha, l1, l2;
 
     /* compute axes and orientation of ellipse surrounding affine region */
-    cvInitMatHeader(&M, 2, 2, CV_64FC1, m, CV_AUTOSTEP);
-    cvInitMatHeader(&V, 2, 2, CV_64FC1, v, CV_AUTOSTEP);
-    cvInitMatHeader(&E, 2, 1, CV_64FC1, e, CV_AUTOSTEP);
-    cvEigenVV(&M, &V, &E, DBL_EPSILON, 0, 0);
+    mv_init_matrix_header(&M, 2, 2, CV_64FC1, m, CV_AUTOSTEP);
+    mv_init_matrix_header(&V, 2, 2, CV_64FC1, v, CV_AUTOSTEP);
+    mv_init_matrix_header(&E, 2, 1, CV_64FC1, e, CV_AUTOSTEP);
+    mv_eigen_val_vector(&M, &V, &E, DBL_EPSILON, 0, 0);
 
     l1 = 1 / sqrt(e[1]);
     l2 = 1 / sqrt(e[0]);
     alpha = -atan2(v[1], v[0]);
     alpha *= 180 / CV_M_PI;
 
-    cvEllipse(img, cvPoint(feat->x, feat->y), cvSize(l2, l1), alpha,
-        0, 360, MAKE_CV_RGB(0, 0, 0), 3, 8, 0);
-    cvEllipse(img, cvPoint(feat->x, feat->y), cvSize(l2, l1), alpha,
+    mv_ellipse(img, mv_point_t(feat->x, feat->y), mv_size_t(l2, l1), alpha,
+        0, 360, MV_RGB(0, 0, 0), 3, 8, 0);
+    mv_ellipse(img, mv_point_t(feat->x, feat->y), mv_size_t(l2, l1), alpha,
         0, 360, color, 1, 8, 0);
-    mv_line(img, cvPoint(feat->x + 2, feat->y), cvPoint(feat->x - 2, feat->y),
+    mv_line(img, mv_point_t(feat->x + 2, feat->y), mv_point_t(feat->x - 2, feat->y),
         color, 1, 8, 0);
-    mv_line(img, cvPoint(feat->x, feat->y + 2), cvPoint(feat->x, feat->y - 2),
+    mv_line(img, mv_point_t(feat->x, feat->y + 2), mv_point_t(feat->x, feat->y - 2),
         color, 1, 8, 0);
 }
 
@@ -156,7 +158,7 @@ static void draw_oxfd_feature(mv_image_t* img, struct feature* feat,
   */
 static void draw_lowe_features(mv_image_t* img, struct feature* feat, int n)
 {
-    CvScalar color = MAKE_CV_RGB(255, 255, 255);
+    mv_scalar_t color = MV_RGB(255, 255, 255);
     int i;
 
     if (img->nChannels > 1)
@@ -174,7 +176,7 @@ Draws a single Lowe-type feature
 @param color color in which to draw
 */
 static void draw_lowe_feature(mv_image_t* img, struct feature* feat,
-    CvScalar color)
+    mv_scalar_t color)
 {
     int len, hlen, blen, start_x, start_y, end_x, end_y, h1_x, h1_y, h2_x, h2_y;
     double scl, ori;
@@ -196,10 +198,10 @@ static void draw_lowe_feature(mv_image_t* img, struct feature* feat,
     h1_y = mv_round(blen * -sin(ori + CV_PI / 18.0)) + start_y;
     h2_x = mv_round(blen *  cos(ori - CV_PI / 18.0)) + start_x;
     h2_y = mv_round(blen * -sin(ori - CV_PI / 18.0)) + start_y;
-    start = cvPoint(start_x, start_y);
-    end = cvPoint(end_x, end_y);
-    h1 = cvPoint(h1_x, h1_y);
-    h2 = cvPoint(h2_x, h2_y);
+    start = mv_point_t(start_x, start_y);
+    end = mv_point_t(end_x, end_y);
+    h1 = mv_point_t(h1_x, h1_y);
+    h2 = mv_point_t(h2_x, h2_y);
 
     mv_line(img, start, end, color, 1, 8, 0);
     mv_line(img, end, h1, color, 1, 8, 0);

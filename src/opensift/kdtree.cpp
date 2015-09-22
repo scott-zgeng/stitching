@@ -14,14 +14,15 @@
   @version 1.1.2-20100521
   */
 
+
+#include <stdio.h>
+#include <string.h>
+
 #include "kdtree.h"
 #include "minpq.h"
 #include "imgfeatures.h"
 #include "utils.h"
 
-#include <cxcore.h>
-
-#include <stdio.h>
 
 struct bbf_data
 {
@@ -42,7 +43,7 @@ static void partition_features(struct kd_node*);
 static struct kd_node* explore_to_leaf(struct kd_node*, struct feature*,
 struct min_pq*);
 static int insert_into_nbr_array(struct feature*, struct feature**, int, int);
-static int within_rect(CvPoint2D64f, CvRect);
+static int within_rect(mv_point_d_t, mv_rect_t);
 
 
 /******************** Functions prototyped in keyptdb.h **********************/
@@ -180,10 +181,10 @@ fail:
   */
 int kdtree_bbf_spatial_knn(struct kd_node* kd_root, struct feature* feat,
     int k, struct feature*** nbrs, int max_nn_chks,
-    CvRect rect, int model)
+    mv_rect_t rect, int model)
 {
     struct feature** all_nbrs, ** sp_nbrs;
-    CvPoint2D64f pt;
+    mv_point_d_t pt;
     int i, n, t = 0;
 
     n = kdtree_bbf_knn(kd_root, feat, max_nn_chks, &all_nbrs, max_nn_chks);
@@ -367,7 +368,7 @@ static double rank_select(double* array, int n, int r)
 
     /* divide array into groups of 5 and sort them */
     gr_5 = n / 5;
-    gr_tot = cvCeil(n / 5.0);
+    gr_tot = mv_ceil(n / 5.0);
     rem_elts = n % 5;
     tmp = array;
     for (i = 0; i < gr_5; i++)
@@ -638,7 +639,7 @@ static int insert_into_nbr_array(struct feature* feat, struct feature** nbrs,
 
   @return Returns 1 if pt is inside rect or 0 otherwise
   */
-static int within_rect(CvPoint2D64f pt, CvRect rect)
+static int within_rect(mv_point_d_t pt, mv_rect_t rect)
 {
     if (pt.x < rect.x || pt.y < rect.y)
         return 0;

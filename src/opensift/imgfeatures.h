@@ -9,11 +9,10 @@
 #ifndef IMGFEATURES_H
 #define IMGFEATURES_H
 
-#include "cxcore.h"
+#include "../mv_base.h"
 
 
 
-#define MAKE_CV_RGB(r, g, b) cvScalar((b), (g), (r), 0)
 
 /** FEATURE_OXFD <BR> FEATURE_LOWE */
 enum feature_type
@@ -32,8 +31,8 @@ enum feature_match_type
 
 
 /* colors in which to display different feature types */
-#define FEATURE_OXFD_COLOR MAKE_CV_RGB(255,255,0)
-#define FEATURE_LOWE_COLOR MAKE_CV_RGB(255,0,255)
+#define FEATURE_OXFD_COLOR MV_RGB(255,255,0)
+#define FEATURE_LOWE_COLOR MV_RGB(255,0,255)
 
 /** max feature descriptor length */
 #define FEATURE_MAX_D 128
@@ -61,8 +60,8 @@ struct feature
     struct feature* fwd_match;     /**< matching feature from forward image */
     struct feature* bck_match;     /**< matching feature from backmward image */
     struct feature* mdl_match;     /**< matching feature from model */
-    CvPoint2D64f img_pt;           /**< location in image */
-    CvPoint2D64f mdl_pt;           /**< location in model */
+    mv_point_d_t img_pt;           /**< location in image */
+    mv_point_d_t mdl_pt;           /**< location in model */
     void* feature_data;            /**< user-definable data */
 };
 

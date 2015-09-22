@@ -12,9 +12,7 @@
 #include "opensift/utils.h"
 #include "opensift/xform.h"
 
-#include <cv.h>
-#include <cxcore.h>
-#include <highgui.h>
+
 
 #include <stdio.h>
 
@@ -176,8 +174,8 @@ int main(int argc, char** argv)
         //绘制图2中包围匹配点的矩形
         //cvRectangle(stacked_ransac,cvPoint(img1->width+img2LeftBound,0),cvPoint(img1->width+img2RightBound,img2->height),CV_RGB(0,0,255),2);
 
-        cvNamedWindow(IMG_MATCH2);//创建窗口
-        cvShowImage(IMG_MATCH2, stacked_ransac);//显示经RANSAC算法筛选后的匹配图
+        mv_named_window(IMG_MATCH2);//创建窗口
+        mv_show_image(IMG_MATCH2, stacked_ransac);//显示经RANSAC算法筛选后的匹配图
         mv_wait_key(0);
 
 
@@ -196,14 +194,14 @@ int main(int argc, char** argv)
         if (invertNum > n_inliers * 0.8)
         {
             
-            mv_matrix_t * H_IVT = cvCreateMat(3, 3, CV_64FC1);//变换矩阵的逆矩阵
+            mv_matrix_t * H_IVT = mv_create_matrix(3, 3, CV_64FC1);//变换矩阵的逆矩阵
             //求H的逆阵H_IVT时，若成功求出，返回非零值
-            if (cvInvert(H, H_IVT))
+            if (mv_invert(H, H_IVT, CV_LU))
             {
                 
-                cvReleaseMat(&H);//释放变换矩阵H，因为用不到了
-                H = cvCloneMat(H_IVT);//将H的逆阵H_IVT中的数据拷贝到H中
-                cvReleaseMat(&H_IVT);//释放逆阵H_IVT
+                mv_release_matrix(&H);//释放变换矩阵H，因为用不到了
+                H = mv_clone_matrix(H_IVT);//将H的逆阵H_IVT中的数据拷贝到H中
+                mv_release_matrix(&H_IVT);//释放逆阵H_IVT
                 //将img1和img2对调
                 mv_image_t * temp = img2;
                 img2 = img1;
@@ -214,7 +212,7 @@ int main(int argc, char** argv)
             }
             else//H不可逆时，返回0
             {
-                cvReleaseMat(&H_IVT);//释放逆阵H_IVT
+                mv_release_matrix(&H_IVT);//释放逆阵H_IVT
                 //QMessageBox::warning(this, tr("警告"), tr("变换矩阵H不可逆"));
             }
         }        
@@ -227,37 +225,37 @@ int main(int argc, char** argv)
         //拼接图像，img1是左图，img2是右图
         CalcFourCorner(H, img2);//计算图2的四个角经变换后的坐标
         //为拼接结果图xformed分配空间,高度为图1图2高度的较小者，根据图2右上角和右下角变换后的点的位置决定拼接图的宽度
-        xformed = cvCreateImage(cvSize(MIN(rightTop.x, rightBottom.x), MIN(img1->height, img2->height)), IPL_DEPTH_8U, 3);
+        xformed = mv_create_image(mv_size_t(MIN(rightTop.x, rightBottom.x), MIN(img1->height, img2->height)), IPL_DEPTH_8U, 3);
         //用变换矩阵H对右图img2做投影变换(变换后会有坐标右移)，结果放到xformed中
-        cvWarpPerspective(img2, xformed, H, CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS, cvScalarAll(0));
-        cvNamedWindow(IMG_MOSAIC_TEMP); //显示临时图,即只将图2变换后的图
-        cvShowImage(IMG_MOSAIC_TEMP, xformed);
+        mv_warp_perspective(img2, xformed, H, CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS, mv_scalar_t(0));
+        mv_named_window(IMG_MOSAIC_TEMP); //显示临时图,即只将图2变换后的图
+        mv_show_image(IMG_MOSAIC_TEMP, xformed);
         mv_wait_key(0);
 
 
         //简易拼接法：直接将将左图img1叠加到xformed的左边
-        mv_image_t* xformed_simple = cvCloneImage(xformed);//简易拼接图，可笼子xformed
-        cvSetImageROI(xformed_simple, cvRect(0, 0, img1->width, img1->height));
-        cvAddWeighted(img1, 1, xformed_simple, 0, 0, xformed_simple);
-        cvResetImageROI(xformed_simple);
-        cvNamedWindow(IMG_MOSAIC_SIMPLE);//创建窗口
-        cvShowImage(IMG_MOSAIC_SIMPLE, xformed_simple);//显示简易拼接图
+        mv_image_t* xformed_simple = mv_clone_image(xformed);//简易拼接图，可笼子xformed
+        mv_set_image_roi(xformed_simple, mv_rect_t(0, 0, img1->width, img1->height));
+        mv_add_weighted(img1, 1, xformed_simple, 0, 0, xformed_simple);
+        mv_reset_image_roi(xformed_simple);
+        mv_named_window(IMG_MOSAIC_SIMPLE);//创建窗口
+        mv_show_image(IMG_MOSAIC_SIMPLE, xformed_simple);//显示简易拼接图
         mv_wait_key(0);
 
 
         //处理后的拼接图，克隆自xformed
-        mv_image_t* xformed_proc = cvCloneImage(xformed);
+        mv_image_t* xformed_proc = mv_clone_image(xformed);
 
         //重叠区域左边的部分完全取自图1
-        cvSetImageROI(img1, cvRect(0, 0, MIN(leftTop.x, leftBottom.x), xformed_proc->height));
-        cvSetImageROI(xformed, cvRect(0, 0, MIN(leftTop.x, leftBottom.x), xformed_proc->height));
-        cvSetImageROI(xformed_proc, cvRect(0, 0, MIN(leftTop.x, leftBottom.x), xformed_proc->height));
-        cvAddWeighted(img1, 1, xformed, 0, 0, xformed_proc);
-        cvResetImageROI(img1);
-        cvResetImageROI(xformed);
-        cvResetImageROI(xformed_proc);
-        cvNamedWindow(IMG_MOSAIC_BEFORE_FUSION);
-        cvShowImage(IMG_MOSAIC_BEFORE_FUSION, xformed_proc);//显示融合之前的拼接图
+        mv_set_image_roi(img1, mv_rect_t(0, 0, MIN(leftTop.x, leftBottom.x), xformed_proc->height));
+        mv_set_image_roi(xformed, mv_rect_t(0, 0, MIN(leftTop.x, leftBottom.x), xformed_proc->height));
+        mv_set_image_roi(xformed_proc, mv_rect_t(0, 0, MIN(leftTop.x, leftBottom.x), xformed_proc->height));
+        mv_add_weighted(img1, 1, xformed, 0, 0, xformed_proc);
+        mv_reset_image_roi(img1);
+        mv_reset_image_roi(xformed);
+        mv_reset_image_roi(xformed_proc);
+        mv_named_window(IMG_MOSAIC_BEFORE_FUSION);
+        mv_show_image(IMG_MOSAIC_BEFORE_FUSION, xformed_proc);//显示融合之前的拼接图
         mv_wait_key(0);
 
         //采用加权平均的方法融合重叠区域
@@ -266,9 +264,9 @@ int main(int argc, char** argv)
         double alpha = 1;//img1中像素的权重
         for (int i = 0; i<xformed_proc->height; i++)//遍历行
         {
-            const uchar * pixel_img1 = ((uchar *)(img1->imageData + img1->widthStep * i));//img1中第i行数据的指针
-            const uchar * pixel_xformed = ((uchar *)(xformed->imageData + xformed->widthStep * i));//xformed中第i行数据的指针
-            uchar * pixel_xformed_proc = ((uchar *)(xformed_proc->imageData + xformed_proc->widthStep * i));//xformed_proc中第i行数据的指针
+            const unsigned char * pixel_img1 = ((unsigned char *)(img1->imageData + img1->widthStep * i));//img1中第i行数据的指针
+            const unsigned char * pixel_xformed = ((unsigned char *)(xformed->imageData + xformed->widthStep * i));//xformed中第i行数据的指针
+            unsigned char * pixel_xformed_proc = ((unsigned char *)(xformed_proc->imageData + xformed_proc->widthStep * i));//xformed_proc中第i行数据的指针
             for (int j = start; j<img1->width; j++)//遍历重叠区域的列
             {
                 //如果遇到图像xformed中无像素的黑点，则完全拷贝图1中的数据
@@ -285,19 +283,19 @@ int main(int argc, char** argv)
                 pixel_xformed_proc[j * 3 + 2] = pixel_img1[j * 3 + 2] * alpha + pixel_xformed[j * 3 + 2] * (1 - alpha);//R通道
             }
         }
-        cvNamedWindow(IMG_MOSAIC_PROC);//创建窗口
-        cvShowImage(IMG_MOSAIC_PROC, xformed_proc);//显示处理后的拼接图
+        mv_named_window(IMG_MOSAIC_PROC);//创建窗口
+        mv_show_image(IMG_MOSAIC_PROC, xformed_proc);//显示处理后的拼接图
         mv_wait_key(0);
 
         //*重叠区域取两幅图像的平均值，效果不好
         //设置ROI，是包含重叠区域的矩形
-        cvSetImageROI(xformed_proc, cvRect(MIN(leftTop.x, leftBottom.x), 0, img1->width - MIN(leftTop.x, leftBottom.x), xformed_proc->height));
-        cvSetImageROI(img1, cvRect(MIN(leftTop.x, leftBottom.x), 0, img1->width - MIN(leftTop.x, leftBottom.x), xformed_proc->height));
-        cvSetImageROI(xformed, cvRect(MIN(leftTop.x, leftBottom.x), 0, img1->width - MIN(leftTop.x, leftBottom.x), xformed_proc->height));
-        cvAddWeighted(img1, 0.5, xformed, 0.5, 0, xformed_proc);
-        cvResetImageROI(xformed_proc);
-        cvResetImageROI(img1);
-        cvResetImageROI(xformed); //*/
+        mv_set_image_roi(xformed_proc, mv_rect_t(MIN(leftTop.x, leftBottom.x), 0, img1->width - MIN(leftTop.x, leftBottom.x), xformed_proc->height));
+        mv_set_image_roi(img1, mv_rect_t(MIN(leftTop.x, leftBottom.x), 0, img1->width - MIN(leftTop.x, leftBottom.x), xformed_proc->height));
+        mv_set_image_roi(xformed, mv_rect_t(MIN(leftTop.x, leftBottom.x), 0, img1->width - MIN(leftTop.x, leftBottom.x), xformed_proc->height));
+        mv_add_weighted(img1, 0.5, xformed, 0.5, 0, xformed_proc);
+        mv_reset_image_roi(xformed_proc);
+        mv_reset_image_roi(img1);
+        mv_reset_image_roi(xformed); //*/
 
         /*对拼接缝周围区域进行滤波来消除拼接缝，效果不好
         //在处理前后的图上分别设置横跨拼接缝的矩形ROI
@@ -317,10 +315,9 @@ int main(int argc, char** argv)
     }
 
 
-
-    cvReleaseImage(&stacked);
-    cvReleaseImage(&img1);
-    cvReleaseImage(&img2);
+    mv_release_image(&stacked);
+    mv_release_image(&img1);
+    mv_release_image(&img2);
     kdtree_release(kd_root);
     free(feat1);
     free(feat2);
@@ -337,7 +334,7 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     double v1[3];//变换后的坐标值
     mv_matrix_t V2(3, 1, CV_64FC1, v2);
     mv_matrix_t V1(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);//矩阵乘法
+    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);//矩阵乘法
     leftTop.x = mv_round(v1[0] / v1[2]);
     leftTop.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,leftTop,7,CV_RGB(255,0,0),2);
@@ -345,9 +342,9 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     //将v2中数据设为左下角坐标
     v2[0] = 0;
     v2[1] = img2->height;
-    V2 = cvMat(3, 1, CV_64FC1, v2);
-    V1 = cvMat(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);
+    V2 = mv_matrix_t(3, 1, CV_64FC1, v2);
+    V1 = mv_matrix_t(3, 1, CV_64FC1, v1);
+    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);
     leftBottom.x = mv_round(v1[0] / v1[2]);
     leftBottom.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,leftBottom,7,CV_RGB(255,0,0),2);
@@ -355,9 +352,9 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     //将v2中数据设为右上角坐标
     v2[0] = img2->width;
     v2[1] = 0;
-    V2 = cvMat(3, 1, CV_64FC1, v2);
-    V1 = cvMat(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);
+    V2 = mv_matrix_t(3, 1, CV_64FC1, v2);
+    V1 = mv_matrix_t(3, 1, CV_64FC1, v1);
+    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);
     rightTop.x = mv_round(v1[0] / v1[2]);
     rightTop.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,rightTop,7,CV_RGB(255,0,0),2);
@@ -365,9 +362,9 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     //将v2中数据设为右下角坐标
     v2[0] = img2->width;
     v2[1] = img2->height;
-    V2 = cvMat(3, 1, CV_64FC1, v2);
-    V1 = cvMat(3, 1, CV_64FC1, v1);
-    cvGEMM(H, &V2, 1, 0, 1, &V1);
+    V2 = mv_matrix_t(3, 1, CV_64FC1, v2);
+    V1 = mv_matrix_t(3, 1, CV_64FC1, v1);
+    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);
     rightBottom.x = mv_round(v1[0] / v1[2]);
     rightBottom.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,rightBottom,7,CV_RGB(255,0,0),2);

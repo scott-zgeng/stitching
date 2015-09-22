@@ -6,10 +6,14 @@
   @version 1.1.2-20100521
   */
 
+
+#include <limits.h>
+
+
 #include "minpq.h"
 #include "utils.h"
 
-#include <limits.h>
+
 
 /************************* Local Function Prototypes *************************/
 

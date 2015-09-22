@@ -9,10 +9,13 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "cxcore.h"
 
 #include <stdio.h>
 //#include <dirent.h>
+
+
+#include "../mv_base.h"
+
 
 
 #define CV_M_PI       3.14159265358979323846
@@ -49,7 +52,7 @@ void write_log(int level, const char* file, int line, const char* format, ...);
    */
 static inline int pixval8(mv_image_t* img, int r, int c)
 {
-    return (int)(((uchar*)(img->imageData + img->widthStep*r))[c]);
+    return (int)(((unsigned char*)(img->imageData + img->widthStep*r))[c]);
 }
 
 
@@ -61,9 +64,9 @@ static inline int pixval8(mv_image_t* img, int r, int c)
    @param c column
    @param val pixel value
    */
-static inline void setpix8(mv_image_t* img, int r, int c, uchar val)
+static inline void setpix8(mv_image_t* img, int r, int c, unsigned char val)
 {
-    ((uchar*)(img->imageData + img->widthStep*r))[c] = val;
+    ((unsigned char*)(img->imageData + img->widthStep*r))[c] = val;
 }
 
 
@@ -206,7 +209,7 @@ int array_double(void** array, int n, int size);
    @param p1 a point
    @param p2 another point
    */
-double dist_sq_2D(CvPoint2D64f p1, CvPoint2D64f p2);
+double dist_sq_2D(mv_point_d_t p1, mv_point_d_t p2);
 
 
 /**
@@ -218,7 +221,7 @@ double dist_sq_2D(CvPoint2D64f p1, CvPoint2D64f p2);
    @param w the x's line weight
    @param color the color of the x
    */
-void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, CvScalar color);
+void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color);
 
 
 /**

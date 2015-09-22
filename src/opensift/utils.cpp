@@ -27,15 +27,13 @@ Copyright (C) 2006-2012  Rob Hess <rob@iqengines.com>
 
 #define MAX_LOG_LEN 512
 
-
-
-
 /*************************** Function Definitions ****************************/
 
 static inline char* time2str(char* ptr)
 {
     time_t t = time(NULL);
-    tm* curr_time = localtime(&t);
+    tm* curr_time;
+    curr_time = localtime(&t);
     sprintf(ptr, "%02d:%02d:%02d", curr_time->tm_hour, curr_time->tm_min, curr_time->tm_sec);
     return ptr + 8;
 }
@@ -275,7 +273,7 @@ int array_double(void** array, int n, int size)
   @param p1 a point
   @param p2 another point
   */
-double dist_sq_2D(CvPoint2D64f p1, CvPoint2D64f p2)
+double dist_sq_2D(mv_point_d_t p1, mv_point_d_t p2)
 {
     double x_diff = p1.x - p2.x;
     double y_diff = p1.y - p2.y;
@@ -294,12 +292,12 @@ double dist_sq_2D(CvPoint2D64f p1, CvPoint2D64f p2)
   @param w the x's line weight
   @param color the color of the x
   */
-void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, CvScalar color)
+void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color)
 {
-    mv_line(img, pt, cvPoint(pt.x + r, pt.y + r), color, w, 8, 0);
-    mv_line(img, pt, cvPoint(pt.x - r, pt.y + r), color, w, 8, 0);
-    mv_line(img, pt, cvPoint(pt.x + r, pt.y - r), color, w, 8, 0);
-    mv_line(img, pt, cvPoint(pt.x - r, pt.y - r), color, w, 8, 0);
+    mv_line(img, pt, mv_point_t(pt.x + r, pt.y + r), color, w, 8, 0);
+    mv_line(img, pt, mv_point_t(pt.x - r, pt.y + r), color, w, 8, 0);
+    mv_line(img, pt, mv_point_t(pt.x + r, pt.y - r), color, w, 8, 0);
+    mv_line(img, pt, mv_point_t(pt.x - r, pt.y - r), color, w, 8, 0);
 }
 
 
@@ -314,16 +312,16 @@ void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, CvScalar color)
   */
 extern mv_image_t* stack_imgs(mv_image_t* img1, mv_image_t* img2)
 {
-    mv_image_t* stacked = cvCreateImage(cvSize(MAX(img1->width, img2->width),
+    mv_image_t* stacked = mv_create_image(mv_size_t(MAX(img1->width, img2->width),
         img1->height + img2->height),
         IPL_DEPTH_8U, 3);
 
-    cvZero(stacked);
-    cvSetImageROI(stacked, cvRect(0, 0, img1->width, img1->height));
-    cvAdd(img1, stacked, stacked, NULL);
-    cvSetImageROI(stacked, cvRect(0, img1->height, img2->width, img2->height));
-    cvAdd(img2, stacked, stacked, NULL);
-    cvResetImageROI(stacked);
+    mv_set_zero(stacked);
+    mv_set_image_roi(stacked, mv_rect_t(0, 0, img1->width, img1->height));
+    mv_add(img1, stacked, stacked, NULL);
+    mv_set_image_roi(stacked, mv_rect_t(0, img1->height, img2->width, img2->height));
+    mv_add(img2, stacked, stacked, NULL);
+    mv_reset_image_roi(stacked);
 
     return stacked;
 }
@@ -332,14 +330,14 @@ extern mv_image_t* stack_imgs(mv_image_t* img1, mv_image_t* img2)
 extern mv_image_t* stack_imgs_horizontal(mv_image_t* img1, mv_image_t* img2)
 {
     
-    mv_image_t * stacked = cvCreateImage(cvSize(img1->width + img2->width, MAX(img1->height, img2->height)),
+    mv_image_t * stacked = mv_create_image(mv_size_t(img1->width + img2->width, MAX(img1->height, img2->height)),
         IPL_DEPTH_8U, 3);
-    cvZero(stacked);
-    cvSetImageROI(stacked, cvRect(0, 0, img1->width, img1->height));
-    cvAdd(img1, stacked, stacked, NULL);
-    cvSetImageROI(stacked, cvRect(img1->width, 0, img2->width, img2->height));
-    cvAdd(img2, stacked, stacked, NULL);
-    cvResetImageROI(stacked);
+    mv_set_zero(stacked);
+    mv_set_image_roi(stacked, mv_rect_t(0, 0, img1->width, img1->height));
+    mv_add(img1, stacked, stacked, NULL);
+    mv_set_image_roi(stacked, mv_rect_t(img1->width, 0, img2->width, img2->height));
+    mv_add(img2, stacked, stacked, NULL);
+    mv_reset_image_roi(stacked);
 
     return stacked;
 }
@@ -379,16 +377,16 @@ void display_big_img(mv_image_t* img, char* title)
         else
             scale = 0.90 * scr_height / img->height;
 
-        small = cvCreateImage(cvSize(img->width * scale, img->height * scale),
+        small = mv_create_image(mv_size_t(img->width * scale, img->height * scale),
             img->depth, img->nChannels);
-        cvResize(img, small, CV_INTER_AREA);
+        mv_resize(img, small, CV_INTER_AREA);
     }
     else
-        small = cvCloneImage(img);
+        small = mv_clone_image(img);
 
-    cvNamedWindow(title, 1);
-    cvShowImage(title, small);
-    cvReleaseImage(&small);
+    mv_named_window(title);
+    mv_show_image(title, small);
+    mv_release_image(&small);
 }
 
 
@@ -432,6 +430,7 @@ void vid_view(mv_image_t** imgs, int n, char* win_name)
         else
         {
             k = mv_wait_key(0);
+            
             switch (k)
             {
                 /* space */
@@ -442,7 +441,7 @@ void vid_view(mv_image_t** imgs, int n, char* win_name)
                 /* esc */
             case 27:
             case 1048603:
-                cvDestroyWindow(win_name);
+                mv_destroy_window(win_name);
                 break;
 
                 /* backspace */
@@ -494,7 +493,7 @@ void vid_view(mv_image_t** imgs, int n, char* win_name)
   */
 int win_closed(char* win_name)
 {
-    if (!cvGetWindowHandle(win_name))
+    if (!mv_get_windows_handle(win_name))
         return 1;
     return 0;
 }
