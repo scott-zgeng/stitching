@@ -34,8 +34,7 @@ static mv_image_t* convert_to_gray32(mv_image_t*);
 static mv_image_t*** build_gauss_pyr(mv_image_t*, int, int, double);
 static mv_image_t* downsample(mv_image_t*);
 static mv_image_t*** build_dog_pyr(mv_image_t***, int, int);
-static mv_seq_t* scale_space_extrema(mv_image_t***, int, int, double, int,
-    mv_mem_storage_t*);
+static int scale_space_extrema(mv_image_t***, int, int, double, int, mv_features* features);
 
 static int is_extremum(mv_image_t***, int, int, int, int);
 static struct feature* interp_extremum(mv_image_t***, int, int, int, int, int,
@@ -48,17 +47,17 @@ static double interp_contr(mv_image_t***, int, int, int, int, double, double,
     double);
 static struct feature* new_feature(void);
 static int is_too_edge_like(mv_image_t*, int, int, int);
-static void calc_feature_scales(mv_seq_t*, double, int);
-static void adjust_for_img_dbl(mv_seq_t*);
-static void calc_feature_oris(mv_seq_t*, mv_image_t***);
+static void calc_feature_scales(mv_features*, double, int);
+static void adjust_for_img_dbl(mv_features*);
+static void calc_feature_oris(mv_features*, mv_image_t***);
 static double* ori_hist(mv_image_t*, int, int, int, int, double);
 static int calc_grad_mag_ori(mv_image_t*, int, int, double*, double*);
 static void smooth_ori_hist(double*, int);
 static double dominant_ori(double*, int);
-static void add_good_ori_features(mv_seq_t*, double*, int, double,
+static void add_good_ori_features(mv_features*, double*, int, double,
 struct feature*);
 static struct feature* clone_feature(struct feature*);
-static void compute_descriptors(mv_seq_t*, mv_image_t***, int, int);
+static void compute_descriptors(mv_features*, mv_image_t***, int, int);
 static double*** descr_hist(mv_image_t*, int, int, double, double, int, int);
 static void interp_hist_entry(double***, double, double, double, double, int,
     int);
@@ -82,9 +81,9 @@ static void release_pyr(mv_image_t****, int, int);
    @return Returns the number of features stored in \a feat or -1 on failure
    @see _sift_features()
    */
-int sift_features(mv_image_t* img, struct feature** feat)
+int sift_features(mv_image_t* img, mv_features* features)
 {
-    return _sift_features(img, feat, SIFT_INTVLS, SIFT_SIGMA, SIFT_CONTR_THR,
+    return _sift_features(img, features, SIFT_INTVLS, SIFT_SIGMA, SIFT_CONTR_THR,
         SIFT_CURV_THR, SIFT_IMG_DBL, SIFT_DESCR_WIDTH,
         SIFT_DESCR_HIST_BINS);
 }
@@ -116,18 +115,17 @@ int sift_features(mv_image_t* img, struct feature** feat)
    @return Returns the number of keypoints stored in \a feat or -1 on failure
    @see sift_keypoints()
    */
-int _sift_features(mv_image_t* img, struct feature** feat, int intvls,
+int _sift_features(mv_image_t* img, mv_features* features, int intvls,
     double sigma, double contr_thr, int curv_thr,
     int img_dbl, int descr_width, int descr_hist_bins)
 {
     mv_image_t* init_img;
     mv_image_t*** gauss_pyr, *** dog_pyr;
-    mv_mem_storage_t* storage;
-    mv_seq_t* features;
+        
     int octvs, i, n = 0;
 
     /* check arguments */
-    if (!img || !feat) {
+    if (!img || !features) {
         WRITE_ERROR_LOG("NULL pointer error");
         return -1;
     }        
@@ -138,9 +136,11 @@ int _sift_features(mv_image_t* img, struct feature** feat, int intvls,
     gauss_pyr = build_gauss_pyr(init_img, octvs, intvls, sigma);
     dog_pyr = build_dog_pyr(gauss_pyr, octvs, intvls);
 
-    storage = mv_create_storage(0);
-    features = scale_space_extrema(dog_pyr, octvs, intvls, contr_thr,
-        curv_thr, storage);
+    
+    int ret = scale_space_extrema(dog_pyr, octvs, intvls, contr_thr, curv_thr, features);
+    if (ret != 0)
+        return -1;
+
     calc_feature_scales(features, sigma, intvls);
     if (img_dbl)
         adjust_for_img_dbl(features);
@@ -148,17 +148,17 @@ int _sift_features(mv_image_t* img, struct feature** feat, int intvls,
     compute_descriptors(features, gauss_pyr, descr_width, descr_hist_bins);
 
     /* sort features by decreasing scale and move from CvSeq to array */
-    mv_seq_sort(features, (CvCmpFunc)feature_cmp, NULL);
-    n = features->total;
+    //mv_seq_sort(features, (CvCmpFunc)feature_cmp, NULL);
+    /*n = features->total;
     *feat = (struct feature*)calloc(n, sizeof(struct feature));
     *feat = (struct feature*)mv_cvt_seq_2_array(features, *feat, CV_WHOLE_SEQ);
     for (i = 0; i < n; i++)
     {
         free((*feat)[i].feature_data);
         (*feat)[i].feature_data = NULL;
-    }
+    }*/
 
-    mv_release_mem_storage(&storage);
+    //mv_release_storage(&storage);
     mv_release_image(&init_img);
     release_pyr(&gauss_pyr, octvs, intvls + 3);
     release_pyr(&dog_pyr, octvs, intvls + 2);
@@ -211,6 +211,8 @@ static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
   */
 static mv_image_t* convert_to_gray32(mv_image_t* img)
 {
+
+    const int MV_BGR2GRAY = 6;
     mv_image_t* gray8, *gray32;
 
     gray32 = mv_create_image(mv_get_size(img), IPL_DEPTH_32F, 1);
@@ -219,7 +221,7 @@ static mv_image_t* convert_to_gray32(mv_image_t* img)
     else
     {
         gray8 = mv_create_image(mv_get_size(img), IPL_DEPTH_8U, 1);
-        mv_cvt_color(img, gray8, CV_BGR2GRAY);
+        mv_cvt_color(img, gray8, MV_BGR2GRAY);
     }
     mv_convert_scale(gray8, gray32, 1.0 / 255.0, 0);
 
@@ -360,17 +362,16 @@ static mv_image_t*** build_dog_pyr(mv_image_t*** gauss_pyr, int octvs, int intvl
   @return Returns an array of detected features whose scales, orientations,
   and descriptors are yet to be determined.
   */
-static mv_seq_t* scale_space_extrema(mv_image_t*** dog_pyr, int octvs, int intvls,
-    double contr_thr, int curv_thr,
-    mv_mem_storage_t* storage)
+static int scale_space_extrema(mv_image_t*** dog_pyr, int octvs, int intvls,
+    double contr_thr, int curv_thr, mv_features* features)
 {
-    mv_seq_t* features;
+    
     double prelim_contr_thr = 0.5 * contr_thr / intvls;
     struct feature* feat;
     struct detection_data* ddata;
     int o, i, r, c;
 
-    features = mv_create_seq(0, sizeof(mv_seq_t), sizeof(struct feature), storage);
+    
     for (o = 0; o < octvs; o++)
     for (i = 1; i <= intvls; i++)
     for (r = SIFT_IMG_BORDER; r < dog_pyr[o][0]->height - SIFT_IMG_BORDER; r++)
@@ -386,7 +387,7 @@ static mv_seq_t* scale_space_extrema(mv_image_t*** dog_pyr, int octvs, int intvl
             if (!is_too_edge_like(dog_pyr[ddata->octv][ddata->intvl],
                 ddata->r, ddata->c, curv_thr))
             {
-                mv_seq_push(features, feat);
+                features->push_back(feat);                
             }
             else
                 free(ddata);
@@ -394,7 +395,7 @@ static mv_seq_t* scale_space_extrema(mv_image_t*** dog_pyr, int octvs, int intvl
         }
     }
 
-    return features;
+    return 0;
 }
 
 
@@ -737,20 +738,6 @@ static int is_too_edge_like(mv_image_t* dog_img, int r, int c, int curv_thr)
 
 
 
-
-static struct feature* get_feature_seq(mv_seq_t* features, int index)
-{
-    assert(sizeof(features->first[0]) == sizeof(mv_seq_block_t));
-    assert(features->elem_size == sizeof(struct feature));
-
-    if (features->first && index < features->first->count) {
-        return (struct feature*)(features->first->data + index * sizeof(struct feature));
-    }
-    else {
-        return (struct feature*)mv_get_seq_elem(features, index);
-    }
-}
-
 /*
   Calculates characteristic scale for each feature in an array.
 
@@ -758,17 +745,17 @@ static struct feature* get_feature_seq(mv_seq_t* features, int index)
   @param sigma amount of Gaussian smoothing per octave of scale space
   @param intvls intervals per octave of scale space
   */
-static void calc_feature_scales(mv_seq_t* features, double sigma, int intvls)
+static void calc_feature_scales(mv_features* features, double sigma, int intvls)
 {
     struct feature* feat;
     struct detection_data* ddata;
     double intvl;
-    int i, n;
+    
 
-    n = features->total;
-    for (i = 0; i < n; i++)
+    int n = features->size();
+    for (int i = 0; i < n; i++)
     {
-        feat = get_feature_seq(features, i);
+        feat = features->at(i);
         ddata = feat_detection_data(feat);
         intvl = ddata->intvl + ddata->subintvl;
         feat->scl = sigma * pow(2.0, ddata->octv + intvl / intvls);
@@ -784,15 +771,15 @@ static void calc_feature_scales(mv_seq_t* features, double sigma, int intvls)
 
   @param features array of features
   */
-static void adjust_for_img_dbl(mv_seq_t* features)
+static void adjust_for_img_dbl(mv_features* features)
 {
     struct feature* feat;
-    int i, n;
+    int i;
 
-    n = features->total;
-    for (i = 0; i < n; i++)
+    int n = features->size();
+    for (int i = 0; i < n; i++)
     {
-        feat = get_feature_seq(features, i);        
+        feat = features->at(i);
         feat->x /= 2.0;
         feat->y /= 2.0;
         feat->scl /= 2.0;
@@ -811,24 +798,26 @@ static void adjust_for_img_dbl(mv_seq_t* features)
   @param features an array of image features
   @param gauss_pyr Gaussian scale space pyramid
   */
-static void calc_feature_oris(mv_seq_t* features, mv_image_t*** gauss_pyr)
+static void calc_feature_oris(mv_features* features, mv_image_t*** gauss_pyr)
 {
     struct feature* feat;
     struct detection_data* ddata;
     double* hist;
     double omax;
-    int i, j, n = features->total;
+    int i, j;
+        
+    int n = features->size();
 
-    for (i = 0; i < n; i++)
+    for (int i = 0; i < n; i++)
     {
-        feat = (struct feature*)malloc(sizeof(struct feature));
-        mv_seq_pop_front(features, feat);
+        feat = features->at(i);
+                
         ddata = feat_detection_data(feat);
         hist = ori_hist(gauss_pyr[ddata->octv][ddata->intvl],
             ddata->r, ddata->c, SIFT_ORI_HIST_BINS,
             mv_round(SIFT_ORI_RADIUS * ddata->scl_octv),
             SIFT_ORI_SIG_FCTR * ddata->scl_octv);
-        for (j = 0; j < SIFT_ORI_SMOOTH_PASSES; j++)
+        for (int j = 0; j < SIFT_ORI_SMOOTH_PASSES; j++)
             smooth_ori_hist(hist, SIFT_ORI_HIST_BINS);
         omax = dominant_ori(hist, SIFT_ORI_HIST_BINS);
         add_good_ori_features(features, hist, SIFT_ORI_HIST_BINS,
@@ -858,7 +847,7 @@ static double* ori_hist(mv_image_t* img, int r, int c, int n, int rad,
     double sigma)
 {
     double* hist;
-    double mag, ori, w, exp_denom, PI2 = CV_PI * 2.0;
+    double mag, ori, w, exp_denom, PI2 = MV_PI * 2.0;
     int bin, i, j;
 
     hist = (double*)calloc(n, sizeof(double));
@@ -868,7 +857,7 @@ static double* ori_hist(mv_image_t* img, int r, int c, int n, int rad,
     if (calc_grad_mag_ori(img, r + i, c + j, &mag, &ori))
     {
         w = exp(-(i*i + j*j) / exp_denom);
-        bin = mv_round(n * (ori + CV_PI) / PI2);
+        bin = mv_round(n * (ori + MV_PI) / PI2);
         bin = (bin < n) ? bin : 0;
         hist[bin] += w * mag;
     }
@@ -976,11 +965,11 @@ static double dominant_ori(double* hist, int n)
   @param mag_thr new features are added for entries in hist greater than this
   @param feat new features are clones of this with different orientations
   */
-static void add_good_ori_features(mv_seq_t* features, double* hist, int n,
+static void add_good_ori_features(mv_features* features, double* hist, int n,
     double mag_thr, struct feature* feat)
 {
     struct feature* new_feat;
-    double bin, PI2 = CV_PI * 2.0;
+    double bin, PI2 = MV_PI * 2.0;
     int l, r, i;
 
     for (i = 0; i < n; i++)
@@ -993,8 +982,8 @@ static void add_good_ori_features(mv_seq_t* features, double* hist, int n,
             bin = i + interp_hist_peak(hist[l], hist[i], hist[r]);
             bin = (bin < 0) ? n + bin : (bin >= n) ? bin - n : bin;
             new_feat = clone_feature(feat);
-            new_feat->ori = ((PI2 * bin) / n) - CV_PI;
-            mv_seq_push(features, new_feat);
+            new_feat->ori = ((PI2 * bin) / n) - MV_PI;
+            features->push_back(new_feat);            
             free(new_feat);
         }
     }
@@ -1034,16 +1023,17 @@ static struct feature* clone_feature(struct feature* feat)
   @param d width of 2D array of orientation histograms
   @param n number of bins per orientation histogram
   */
-static void compute_descriptors(mv_seq_t* features, mv_image_t*** gauss_pyr, int d, int n)
+static void compute_descriptors(mv_features* features, mv_image_t*** gauss_pyr, int d, int n)
 {
     struct feature* feat;
     struct detection_data* ddata;
     double*** hist;
-    int i, k = features->total;
+    
 
-    for (i = 0; i < k; i++)
+    int k = features->size();
+    for (int i = 0; i < k; i++)
     {
-        feat = get_feature_seq(features, i);        
+        feat = features->at(i);
         ddata = feat_detection_data(feat);
         hist = descr_hist(gauss_pyr[ddata->octv][ddata->intvl], ddata->r,
             ddata->c, feat->ori, ddata->scl_octv, d, n);
@@ -1073,7 +1063,7 @@ static double*** descr_hist(mv_image_t* img, int r, int c, double ori,
 {
     double*** hist;
     double cos_t, sin_t, hist_width, exp_denom, r_rot, c_rot, grad_mag,
-        grad_ori, w, rbin, cbin, obin, bins_per_rad, PI2 = 2.0 * CV_PI;
+        grad_ori, w, rbin, cbin, obin, bins_per_rad, PI2 = 2.0 * MV_PI;
     int radius, i, j;
 
     hist = (double***)calloc(d, sizeof(double**));

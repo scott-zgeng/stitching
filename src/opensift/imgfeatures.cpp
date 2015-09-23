@@ -194,10 +194,10 @@ static void draw_lowe_feature(mv_image_t* img, struct feature* feat,
     blen = len - hlen;
     end_x = mv_round(len *  cos(ori)) + start_x;
     end_y = mv_round(len * -sin(ori)) + start_y;
-    h1_x = mv_round(blen *  cos(ori + CV_PI / 18.0)) + start_x;
-    h1_y = mv_round(blen * -sin(ori + CV_PI / 18.0)) + start_y;
-    h2_x = mv_round(blen *  cos(ori - CV_PI / 18.0)) + start_x;
-    h2_y = mv_round(blen * -sin(ori - CV_PI / 18.0)) + start_y;
+    h1_x = mv_round(blen *  cos(ori + MV_PI / 18.0)) + start_x;
+    h1_y = mv_round(blen * -sin(ori + MV_PI / 18.0)) + start_y;
+    h2_x = mv_round(blen *  cos(ori - MV_PI / 18.0)) + start_x;
+    h2_y = mv_round(blen * -sin(ori - MV_PI / 18.0)) + start_y;
     start = mv_point_t(start_x, start_y);
     end = mv_point_t(end_x, end_y);
     h1 = mv_point_t(h1_x, h1_y);

@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     WRITE_INFO_LOG("enter main function");
 
     mv_image_t* img1, *img2, *stacked;
-    struct feature* feat1, *feat2, *feat;
+    struct feature *feat;
     struct feature** nbrs;
     struct kd_node* kd_root;
     mv_point_t pt1, pt2;
@@ -86,17 +86,21 @@ int main(int argc, char** argv)
     stacked = stack_imgs(img1, img2);
 
     WRITE_INFO_LOG("Finding features in %s...", imgfile1);
+    mv_features feat1;
     n1 = sift_features(img1, &feat1);
 
+    mv_features feat2;
     WRITE_INFO_LOG("Finding features in %s...", imgfile2);
     n2 = sift_features(img2, &feat2);
 
+    
+
     WRITE_INFO_LOG("Building kd tree...");
-    kd_root = kdtree_build(feat1, n1);
+    kd_root = kdtree_build(feat1[0], feat1.size());
 
     for (i = 0; i < n2; i++)
     {
-        feat = feat2 + i;
+        feat = feat2[i];
         k = kdtree_bbf_knn(kd_root, feat, 2, &nbrs, KDTREE_BBF_MAX_NN_CHKS);
         if (k == 2)
         {
@@ -109,7 +113,7 @@ int main(int argc, char** argv)
                 pt2.y += img1->height;
                 mv_line(stacked, pt1, pt2, MV_RGB(255, 0, 255), 1, 8, 0);
                 m++;
-                feat2[i].fwd_match = nbrs[0];
+                feat2[i]->fwd_match = nbrs[0];
             }
         }
         free(nbrs);
@@ -132,7 +136,7 @@ int main(int argc, char** argv)
     struct feature **inliers;
     int n_inliers;
 
-    H = ransac_xform(feat2, n2, FEATURE_FWD_MATCH, lsq_homog, 4, 0.01, homog_xfer_err, 3.0, &inliers, &n_inliers);
+    H = ransac_xform(feat2[0], feat2.size(), FEATURE_FWD_MATCH, lsq_homog, 4, 0.01, homog_xfer_err, 3.0, &inliers, &n_inliers);
     mv_image_t *stacked_ransac;
 
     //若能成功计算出变换矩阵，即两幅图中有共同区域
@@ -319,8 +323,8 @@ int main(int argc, char** argv)
     mv_release_image(&img1);
     mv_release_image(&img2);
     kdtree_release(kd_root);
-    free(feat1);
-    free(feat2);
+    //free(feat1);
+    //free(feat2);
     return 0;
 }
 

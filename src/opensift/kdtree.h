@@ -51,6 +51,8 @@ struct kd_node
 
    @return Returns the root of a kd tree built from \a features.
    */
+
+#include "sift.h"
 extern struct kd_node* kdtree_build(struct feature* features, int n);
 
 
