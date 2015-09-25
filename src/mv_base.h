@@ -24,86 +24,86 @@
 #endif
 
 
-#define CV_CN_MAX     512
-#define CV_CN_SHIFT   3
-#define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
+#define MV_CN_MAX     512
+#define MV_CN_SHIFT   3
+#define MV_DEPTH_MAX  (1 << MV_CN_SHIFT)
 
-#define CV_8U   0
-#define CV_8S   1
-#define CV_16U  2
-#define CV_16S  3
-#define CV_32S  4
-#define CV_32F  5
-#define CV_64F  6
-#define CV_USRTYPE1 7
+#define MV_8U   0
+#define MV_8S   1
+#define MV_16U  2
+#define MV_16S  3
+#define MV_32S  4
+#define MV_32F  5
+#define MV_64F  6
+#define MV_USRTYPE1 7
 
-#define CV_MAT_DEPTH_MASK       (CV_DEPTH_MAX - 1)
-#define CV_MAT_DEPTH(flags)     ((flags) & CV_MAT_DEPTH_MASK)
+#define MV_MAT_DEPTH_MASK       (MV_DEPTH_MAX - 1)
+#define MV_MAT_DEPTH(flags)     ((flags) & MV_MAT_DEPTH_MASK)
 
-#define CV_MAKETYPE(depth,cn) (CV_MAT_DEPTH(depth) + (((cn)-1) << CV_CN_SHIFT))
-#define CV_MAKE_TYPE CV_MAKETYPE
-
-#define CV_8UC1 CV_MAKETYPE(CV_8U,1)
-#define CV_8UC2 CV_MAKETYPE(CV_8U,2)
-#define CV_8UC3 CV_MAKETYPE(CV_8U,3)
-#define CV_8UC4 CV_MAKETYPE(CV_8U,4)
-#define CV_8UC(n) CV_MAKETYPE(CV_8U,(n))
-
-#define CV_8SC1 CV_MAKETYPE(CV_8S,1)
-#define CV_8SC2 CV_MAKETYPE(CV_8S,2)
-#define CV_8SC3 CV_MAKETYPE(CV_8S,3)
-#define CV_8SC4 CV_MAKETYPE(CV_8S,4)
-#define CV_8SC(n) CV_MAKETYPE(CV_8S,(n))
-
-#define CV_16UC1 CV_MAKETYPE(CV_16U,1)
-#define CV_16UC2 CV_MAKETYPE(CV_16U,2)
-#define CV_16UC3 CV_MAKETYPE(CV_16U,3)
-#define CV_16UC4 CV_MAKETYPE(CV_16U,4)
-#define CV_16UC(n) CV_MAKETYPE(CV_16U,(n))
-
-#define CV_16SC1 CV_MAKETYPE(CV_16S,1)
-#define CV_16SC2 CV_MAKETYPE(CV_16S,2)
-#define CV_16SC3 CV_MAKETYPE(CV_16S,3)
-#define CV_16SC4 CV_MAKETYPE(CV_16S,4)
-#define CV_16SC(n) CV_MAKETYPE(CV_16S,(n))
-
-#define CV_32SC1 CV_MAKETYPE(CV_32S,1)
-#define CV_32SC2 CV_MAKETYPE(CV_32S,2)
-#define CV_32SC3 CV_MAKETYPE(CV_32S,3)
-#define CV_32SC4 CV_MAKETYPE(CV_32S,4)
-#define CV_32SC(n) CV_MAKETYPE(CV_32S,(n))
-
-#define CV_32FC1 CV_MAKETYPE(CV_32F,1)
-#define CV_32FC2 CV_MAKETYPE(CV_32F,2)
-#define CV_32FC3 CV_MAKETYPE(CV_32F,3)
-#define CV_32FC4 CV_MAKETYPE(CV_32F,4)
-#define CV_32FC(n) CV_MAKETYPE(CV_32F,(n))
-
-#define CV_64FC1 CV_MAKETYPE(CV_64F,1)
-#define CV_64FC2 CV_MAKETYPE(CV_64F,2)
-#define CV_64FC3 CV_MAKETYPE(CV_64F,3)
-#define CV_64FC4 CV_MAKETYPE(CV_64F,4)
-#define CV_64FC(n) CV_MAKETYPE(CV_64F,(n))
-
-#define CV_MAT_CN_MASK          ((CV_CN_MAX - 1) << CV_CN_SHIFT)
-#define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
-#define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
-#define CV_MAT_TYPE(flags)      ((flags) & CV_MAT_TYPE_MASK)
-#define CV_MAT_CONT_FLAG_SHIFT  14
-#define CV_MAT_CONT_FLAG        (1 << CV_MAT_CONT_FLAG_SHIFT)
-#define CV_IS_MAT_CONT(flags)   ((flags) & CV_MAT_CONT_FLAG)
-#define CV_IS_CONT_MAT          CV_IS_MAT_CONT
-#define CV_SUBMAT_FLAG_SHIFT    15
-#define CV_SUBMAT_FLAG          (1 << CV_SUBMAT_FLAG_SHIFT)
+#define MV_MAKETYPE(depth,cn) (MV_MAT_DEPTH(depth) + (((cn)-1) << MV_CN_SHIFT))
 
 
-#define CV_MAGIC_MASK       0xFFFF0000
-#define CV_MAT_MAGIC_VAL    0x42420000
+#define MV_8UC1 MV_MAKETYPE(MV_8U,1)
+#define MV_8UC2 MV_MAKETYPE(MV_8U,2)
+#define MV_8UC3 MV_MAKETYPE(MV_8U,3)
+#define MV_8UC4 MV_MAKETYPE(MV_8U,4)
+#define MV_8UC(n) MV_MAKETYPE(MV_8U,(n))
+
+#define MV_8SC1 MV_MAKETYPE(MV_8S,1)
+#define MV_8SC2 MV_MAKETYPE(MV_8S,2)
+#define MV_8SC3 MV_MAKETYPE(MV_8S,3)
+#define MV_8SC4 MV_MAKETYPE(MV_8S,4)
+#define MV_8SC(n) MV_MAKETYPE(MV_8S,(n))
+
+#define MV_16UC1 MV_MAKETYPE(MV_16U,1)
+#define MV_16UC2 MV_MAKETYPE(MV_16U,2)
+#define MV_16UC3 MV_MAKETYPE(MV_16U,3)
+#define MV_16UC4 MV_MAKETYPE(MV_16U,4)
+#define MV_16UC(n) MV_MAKETYPE(MV_16U,(n))
+
+#define MV_16SC1 MV_MAKETYPE(MV_16S,1)
+#define MV_16SC2 MV_MAKETYPE(MV_16S,2)
+#define MV_16SC3 MV_MAKETYPE(MV_16S,3)
+#define MV_16SC4 MV_MAKETYPE(MV_16S,4)
+#define MV_16SC(n) MV_MAKETYPE(MV_16S,(n))
+
+#define MV_32SC1 MV_MAKETYPE(MV_32S,1)
+#define MV_32SC2 MV_MAKETYPE(MV_32S,2)
+#define MV_32SC3 MV_MAKETYPE(MV_32S,3)
+#define MV_32SC4 MV_MAKETYPE(MV_32S,4)
+#define MV_32SC(n) MV_MAKETYPE(MV_32S,(n))
+
+#define MV_32FC1 MV_MAKETYPE(MV_32F,1)
+#define MV_32FC2 MV_MAKETYPE(MV_32F,2)
+#define MV_32FC3 MV_MAKETYPE(MV_32F,3)
+#define MV_32FC4 MV_MAKETYPE(MV_32F,4)
+#define MV_32FC(n) MV_MAKETYPE(MV_32F,(n))
+
+#define MV_64FC1 MV_MAKETYPE(MV_64F,1)
+#define MV_64FC2 MV_MAKETYPE(MV_64F,2)
+#define MV_64FC3 MV_MAKETYPE(MV_64F,3)
+#define MV_64FC4 MV_MAKETYPE(MV_64F,4)
+#define MV_64FC(n) MV_MAKETYPE(MV_64F,(n))
+
+#define MV_MAT_CN_MASK          ((MV_CN_MAX - 1) << MV_CN_SHIFT)
+#define MV_MAT_CN(flags)        ((((flags) & MV_MAT_CN_MASK) >> MV_CN_SHIFT) + 1)
+#define MV_MAT_TYPE_MASK        (MV_DEPTH_MAX*MV_CN_MAX - 1)
+#define MV_MAT_TYPE(flags)      ((flags) & MV_MAT_TYPE_MASK)
+#define MV_MAT_CONT_FLAG_SHIFT  14
+#define MV_MAT_CONT_FLAG        (1 << MV_MAT_CONT_FLAG_SHIFT)
+#define MV_IS_MAT_CONT(flags)   ((flags) & MV_MAT_CONT_FLAG)
+#define MV_IS_CONT_MAT          MV_IS_MAT_CONT
+#define MV_SUBMAT_FLAG_SHIFT    15
+#define MV_SUBMAT_FLAG          (1 << MV_SUBMAT_FLAG_SHIFT)
+
+
+#define MV_MAGIC_MASK       0xFFFF0000
+#define MV_MAT_MAGIC_VAL    0x42420000
 
 
 /* 0x3a50 = 11 10 10 01 01 00 00 ~ array of log2(sizeof(arr_type_elem)) */
-#define CV_ELEM_SIZE(type) \
-    (CV_MAT_CN(type) << ((((sizeof(size_t) / 4 + 1) * 16384 | 0x3a50) >> CV_MAT_DEPTH(type) * 2) & 3))
+#define MV_ELEM_SIZE(type) \
+    (MV_MAT_CN(type) << ((((sizeof(size_t) / 4 + 1) * 16384 | 0x3a50) >> MV_MAT_DEPTH(type) * 2) & 3))
 
 
 
@@ -139,14 +139,14 @@
 
 
 
-#define CV_INTER_NN 0
-#define CV_INTER_LINEAR  1
-#define CV_INTER_CUBIC  2
-#define CV_INTER_AREA  3
-#define CV_INTER_LANCZOS4  4
+#define MV_INTER_NN 0
+#define MV_INTER_LINEAR  1
+#define MV_INTER_CUBIC  2
+#define MV_INTER_AREA  3
+#define MV_INTER_LANCZOS4  4
 
-#define CV_WARP_FILL_OUTLIERS  8
-#define CV_WARP_INVERSE_MAP 16
+#define MV_WARP_FILL_OUTLIERS  8
+#define MV_WARP_INVERSE_MAP 16
 
 
 
@@ -157,37 +157,39 @@
 /** linear convolution with \f$\texttt{size1}\times\texttt{size2}\f$ box kernel (all 1's). If
 you want to smooth different pixels with different-size box kernels, you can use the integral
 image that is computed using integral */
-#define CV_BLUR_NO_SCALE 0
-#define  CV_BLUR 1
-#define  CV_GAUSSIAN 2
-#define  CV_MEDIAN 3
-#define  CV_BILATERAL 4
+#define MV_BLUR_NO_SCALE 0
+#define  MV_BLUR 1
+#define  MV_GAUSSIAN 2
+#define  MV_MEDIAN 3
+#define  MV_BILATERAL 4
 
 
-#define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
-#define CV_WHOLE_SEQ  mv_slice_t(0, CV_WHOLE_SEQ_END_INDEX)
+#define MV_WHOLE_SEQ_END_INDEX 0x3fffffff
+#define MV_WHOLE_SEQ  mv_slice_t(0, MV_WHOLE_SEQ_END_INDEX)
 
 
-#define CV_LU  0
-#define CV_SVD 1
-#define CV_SVD_SYM 2
-#define CV_CHOLESKY 3
-#define CV_QR  4
-#define CV_NORMAL 16
+#define MV_LU  0
+#define MV_SVD 1
+#define MV_SVD_SYM 2
+#define MV_CHOLESKY 3
+#define MV_QR  4
+#define MV_NORMAL 16
 
 
-#define CV_SVD_MODIFY_A   1
-#define CV_SVD_U_T        2
-#define CV_SVD_V_T        4
+#define MV_SVD_MODIFY_A   1
+#define MV_SVD_U_T        2
+#define MV_SVD_V_T        4
 
 
-#define CV_GEMM_A_T 1
-#define CV_GEMM_B_T 2
-#define CV_GEMM_C_T 4
+#define MV_GEMM_A_T 1
+#define MV_GEMM_B_T 2
+#define MV_GEMM_C_T 4
 
 
-#define CV_AUTOSTEP  0x7fffffff
+#define MV_AUTOSTEP  0x7fffffff
 
+
+typedef unsigned char mv_byte;
 
 struct mv_roi_t
 {
@@ -199,6 +201,7 @@ struct mv_roi_t
 };
 
 
+struct _IplImage;
 struct mv_image_t
 {
     int  nSize;             /**< sizeof(IplImage) */
@@ -218,22 +221,23 @@ struct mv_image_t
     int  width;             /**< Image width in pixels.                           */
     int  height;            /**< Image height in pixels.                          */
     
-    mv_roi_t *roi;    /**< Image ROI. If NULL, the whole image is selected. */
-    mv_image_t *maskROI;      /**< Must be NULL. */
+    mv_roi_t*   roi;    /**< Image ROI. If NULL, the whole image is selected. */
+    mv_image_t* maskROI;      /**< Must be NULL. */
     
-    void  *imageId;                 /**< "           " */
+    void*   imageId;                 /**< "           " */
     //struct _IplTileInfo *tileInfo;  /**< "           " */  
-    int  imageSize;         /**< Image data size in bytes
+    int     imageSize;         /**< Image data size in bytes
                             (==image->height*image->widthStep
                             in case of interleaved data)*/
-    char *imageData;        /**< Pointer to aligned image data.         */
-    int  widthStep;         /**< Size of aligned image row in bytes.    */
-    int  BorderMode[4];     /**< Ignored by OpenCV.                     */
-    int  BorderConst[4];    /**< Ditto.                                 */
-    char *imageDataOrigin;  /**< Pointer to very origin of image data
-                            (not necessarily aligned) -
-                            needed for correct deallocation */
+    mv_byte*imageData;          /**< Pointer to aligned image data.         */
+    int     widthStep;          /**< Size of aligned image row in bytes.    */
+    int     BorderMode[4];      /**< Ignored by OpenCV.                     */
+    int     BorderConst[4];     /**< Ditto.                                 */
+    mv_byte*imageDataOrigin;    /**< Pointer to very origin of image data
+                                (not necessarily aligned) -
+                                needed for correct deallocation */
 
+    struct _IplImage* org; // 用于目前测试用，后续删除
 };
 
 
@@ -363,11 +367,11 @@ struct mv_matrix_t
 
     mv_matrix_t(int r, int c, int t, void* ptr)
     {        
-        type = CV_MAT_TYPE(t);
-        type = CV_MAT_MAGIC_VAL | CV_MAT_CONT_FLAG | t;
+        type = MV_MAT_TYPE(t);
+        type = MV_MAT_MAGIC_VAL | MV_MAT_CONT_FLAG | t;
         cols = c;
         rows = r;
-        step = c * CV_ELEM_SIZE(t);
+        step = c * MV_ELEM_SIZE(t);
         data.ptr = (unsigned char*)ptr;
         refcount = NULL;
         hdr_refcount = 0;        
@@ -399,11 +403,11 @@ inline int mv_round(double value)
         fistp t;
     }
     return t;
-#elif ((defined _MSC_VER && defined _M_ARM) || defined CV_ICC || \
+#elif ((defined _MSC_VER && defined _M_ARM) || defined MV_ICC || \
     defined __GNUC__) && defined HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND_DBL(value);
-#elif defined CV_ICC || defined __GNUC__
-# if CV_VFP
+#elif defined MV_ICC || defined __GNUC__
+# if MV_VFP
     ARM_ROUND_DBL(value);
 # else
     return (int)lrint(value);
@@ -460,14 +464,14 @@ inline int mv_floor(double value)
 inline void  mv_matrix_set(mv_matrix_t* mat, int row, int col, double value)
 {
     int type;
-    type = CV_MAT_TYPE(mat->type);
+    type = MV_MAT_TYPE(mat->type);
     //assert((unsigned)row < (unsigned)mat->rows && (unsigned)col < (unsigned)mat->cols);
 
-    if (type == CV_32FC1)
+    if (type == MV_32FC1)
         ((float*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (float)value;
     else
     {
-        //assert(type == CV_64FC1);
+        //assert(type == MV_64FC1);
         ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = value;
     }
 }
@@ -486,29 +490,30 @@ void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, con
 void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
 void mv_resize(const mv_image_t* src, mv_image_t* dst, int interpolation);
 mv_size_t mv_get_size(const mv_image_t* arr);
-void mv_cvt_color(const mv_image_t* src, mv_image_t* dst, int code);
+void mv_cvt_bgr_gray(const mv_image_t* src, mv_image_t* dst);
 void mv_convert_scale(const mv_image_t* src, mv_image_t* dst, double scale, double shift);
 void mv_smooth(const mv_image_t* src, mv_image_t* dst, int smoothtype, int size1, int size2, double sigma1, double sigma2);
 void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix_t* map_matrix, int flags, mv_scalar_t fillval);
 
 
 
-// 13
+
+// 13  先不移植，等图像部分移植完成后再考虑
 mv_matrix_t* mv_create_matrix(int rows, int cols, int type);
-double mv_invert(mv_matrix_t* src, mv_matrix_t* dst, int method);
+double mv_invert(mv_matrix_t* src, mv_matrix_t* dst, int method);  // OK
 void mv_release_matrix(mv_matrix_t** mat);
-mv_matrix_t* mv_clone_matrix(const mv_matrix_t* mat);
+mv_matrix_t* mv_clone_matrix(const mv_matrix_t* mat);  
 mv_matrix_t* mv_init_matrix_header(mv_matrix_t* mat, int rows, int cols, int type, void* data, int step);
 void mv_matrix_mul_add_ex(const mv_matrix_t* src1, const mv_matrix_t* src2, double alpha,
     const mv_matrix_t* src3, double beta, mv_matrix_t* dst, int tABC);
 #define mv_matrix_mul(src1, src2, dst)  mv_matrix_mul_add_ex((src1), (src2), 1.0, NULL, 1.0, (dst), 0)
-void mv_eigen_val_vector(mv_matrix_t* mat, mv_matrix_t* evects, mv_matrix_t* evals, double eps, int lowindex, int highindex);
+//void mv_eigen_val_vector(mv_matrix_t* mat, mv_matrix_t* evects, mv_matrix_t* evals, double eps, int lowindex, int highindex);  //OK
 void mv_matrix_zero(mv_matrix_t* mat);
-void mv_svd(mv_matrix_t* A, mv_matrix_t* W, mv_matrix_t* U, mv_matrix_t* V, int flags);
+//void mv_svd(mv_matrix_t* A, mv_matrix_t* W, mv_matrix_t* U, mv_matrix_t* V, int flags);  //OK
 mv_matrix_t* mv_get_row(const mv_matrix_t* arr, mv_matrix_t* submat, int row);
-void mv_convert(const mv_matrix_t* src, mv_matrix_t* dst);
-void mv_copy(const mv_matrix_t* src, mv_matrix_t* dst, const mv_matrix_t* mask);
-int mv_solve(const mv_matrix_t* src1, const mv_matrix_t* src2, mv_matrix_t* dst, int method);
+void mv_convert(const mv_matrix_t* src, mv_matrix_t* dst);     // COPY?
+//void mv_copy(const mv_matrix_t* src, mv_matrix_t* dst, const mv_matrix_t* mask);
+int mv_solve(const mv_matrix_t* src1, const mv_matrix_t* src2, mv_matrix_t* dst, int method);   // SVD 
 
 
 
@@ -524,6 +529,14 @@ void mv_destroy_window(const char* name);
 void* mv_get_windows_handle(const char* name);
 mv_image_t* mv_load_image(const char* filename, int iscolor);
 
+
+
+#define MV_FAILED -1
+#define MV_SUCCEEDED 0
+
+
+void* mv_malloc(size_t size);
+void mv_free(void* ptr);
 
 
 #endif  //__MV_BASE_H__

@@ -18,7 +18,7 @@
 
 
 
-#define CV_M_PI       3.14159265358979323846
+#define MV_M_PI       3.14159265358979323846
 
 #define LOG_LEVEL_NONE 1
 #define LOG_LEVEL_INFO 1

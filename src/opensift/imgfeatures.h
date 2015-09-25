@@ -74,7 +74,7 @@ struct feature
    @param feat array of Oxford-type features
    @param n number of features
    */
-extern void draw_features(mv_image_t* img, struct feature* feat, int n);
+//extern void draw_features(mv_image_t* img, struct feature* feat, int n);
 
 
 /**

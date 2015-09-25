@@ -180,49 +180,49 @@ end:
   in pts to their corresponding points in mpts or NULL if fewer than 4
   correspondences were provided
   */
-mv_matrix_t* dlt_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
-{
-    mv_matrix_t* H, *A, *VT, *D, h, v9;
-    double _h[9];
-    int i;
-
-    if (n < 4)
-        return NULL;
-
-    /* set up matrices so we can unstack homography into h; Ah = 0 */
-    A = mv_create_matrix(2 * n, 9, CV_64FC1);
-    mv_matrix_zero(A);
-    for (i = 0; i < n; i++)
-    {
-        mv_matrix_set(A, 2 * i, 3, -pts[i].x);
-        mv_matrix_set(A, 2 * i, 4, -pts[i].y);
-        mv_matrix_set(A, 2 * i, 5, -1.0);
-        mv_matrix_set(A, 2 * i, 6, mpts[i].y * pts[i].x);
-        mv_matrix_set(A, 2 * i, 7, mpts[i].y * pts[i].y);
-        mv_matrix_set(A, 2 * i, 8, mpts[i].y);
-        mv_matrix_set(A, 2 * i + 1, 0, pts[i].x);
-        mv_matrix_set(A, 2 * i + 1, 1, pts[i].y);
-        mv_matrix_set(A, 2 * i + 1, 2, 1.0);
-        mv_matrix_set(A, 2 * i + 1, 6, -mpts[i].x * pts[i].x);
-        mv_matrix_set(A, 2 * i + 1, 7, -mpts[i].x * pts[i].y);
-        mv_matrix_set(A, 2 * i + 1, 8, -mpts[i].x);
-    }
-    D = mv_create_matrix(9, 9, CV_64FC1);
-    VT = mv_create_matrix(9, 9, CV_64FC1);
-    mv_svd(A, D, NULL, VT, CV_SVD_MODIFY_A + CV_SVD_V_T);
-    v9 = mv_matrix_t(1, 9, CV_64FC1, NULL);
-    mv_get_row(VT, &v9, 8);
-    h = mv_matrix_t(1, 9, CV_64FC1, _h);
-    mv_copy(&v9, &h, NULL);
-    h = mv_matrix_t(3, 3, CV_64FC1, _h);
-    H = mv_create_matrix(3, 3, CV_64FC1);
-    mv_convert(&h, H);
-
-    mv_release_matrix(&A);
-    mv_release_matrix(&D);
-    mv_release_matrix(&VT);
-    return H;
-}
+//mv_matrix_t* dlt_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
+//{
+//    mv_matrix_t* H, *A, *VT, *D, h, v9;
+//    double _h[9];
+//    int i;
+//
+//    if (n < 4)
+//        return NULL;
+//
+//    /* set up matrices so we can unstack homography into h; Ah = 0 */
+//    A = mv_create_matrix(2 * n, 9, MV_64FC1);
+//    mv_matrix_zero(A);
+//    for (i = 0; i < n; i++)
+//    {
+//        mv_matrix_set(A, 2 * i, 3, -pts[i].x);
+//        mv_matrix_set(A, 2 * i, 4, -pts[i].y);
+//        mv_matrix_set(A, 2 * i, 5, -1.0);
+//        mv_matrix_set(A, 2 * i, 6, mpts[i].y * pts[i].x);
+//        mv_matrix_set(A, 2 * i, 7, mpts[i].y * pts[i].y);
+//        mv_matrix_set(A, 2 * i, 8, mpts[i].y);
+//        mv_matrix_set(A, 2 * i + 1, 0, pts[i].x);
+//        mv_matrix_set(A, 2 * i + 1, 1, pts[i].y);
+//        mv_matrix_set(A, 2 * i + 1, 2, 1.0);
+//        mv_matrix_set(A, 2 * i + 1, 6, -mpts[i].x * pts[i].x);
+//        mv_matrix_set(A, 2 * i + 1, 7, -mpts[i].x * pts[i].y);
+//        mv_matrix_set(A, 2 * i + 1, 8, -mpts[i].x);
+//    }
+//    D = mv_create_matrix(9, 9, MV_64FC1);
+//    VT = mv_create_matrix(9, 9, MV_64FC1);
+//    mv_svd(A, D, NULL, VT, MV_SVD_MODIFY_A + MV_SVD_V_T);
+//    v9 = mv_matrix_t(1, 9, MV_64FC1, NULL);
+//    mv_get_row(VT, &v9, 8);
+//    h = mv_matrix_t(1, 9, MV_64FC1, _h);
+//    mv_copy(&v9, &h, NULL);
+//    h = mv_matrix_t(3, 3, MV_64FC1, _h);
+//    H = mv_create_matrix(3, 3, MV_64FC1);
+//    mv_convert(&h, H);
+//
+//    mv_release_matrix(&A);
+//    mv_release_matrix(&D);
+//    mv_release_matrix(&VT);
+//    return H;
+//}
 
 
 
@@ -252,10 +252,10 @@ mv_matrix_t* lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
     }
 
     /* set up matrices so we can unstack homography into X; AX = B */
-    A = mv_create_matrix(2 * n, 8, CV_64FC1);
-    B = mv_create_matrix(2 * n, 1, CV_64FC1);
-    X = mv_matrix_t(8, 1, CV_64FC1, x);
-    H = mv_create_matrix(3, 3, CV_64FC1);
+    A = mv_create_matrix(2 * n, 8, MV_64FC1);
+    B = mv_create_matrix(2 * n, 1, MV_64FC1);
+    X = mv_matrix_t(8, 1, MV_64FC1, x);
+    H = mv_create_matrix(3, 3, MV_64FC1);
     mv_matrix_zero(A);
     for (i = 0; i < n; i++)
     {
@@ -272,9 +272,9 @@ mv_matrix_t* lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
         mv_matrix_set(B, i, 0, mpts[i].x);
         mv_matrix_set(B, i + n, 0, mpts[i].y);
     }
-    mv_solve(A, B, &X, CV_SVD);
+    mv_solve(A, B, &X, MV_SVD);
     x[8] = 1.0;
-    X = mv_matrix_t(3, 3, CV_64FC1, x);
+    X = mv_matrix_t(3, 3, MV_64FC1, x);
     mv_convert(&X, H);
 
     mv_release_matrix(&A);
@@ -328,8 +328,8 @@ mv_point_d_t persp_xform_pt(mv_point_d_t pt, mv_matrix_t* T)
     double xy[3] = { pt.x, pt.y, 1.0 }, uv[3] = { 0 };
     mv_point_d_t rslt;
 
-    mv_init_matrix_header(&XY, 3, 1, CV_64FC1, xy, CV_AUTOSTEP);
-    mv_init_matrix_header(&UV, 3, 1, CV_64FC1, uv, CV_AUTOSTEP);
+    mv_init_matrix_header(&XY, 3, 1, MV_64FC1, xy, MV_AUTOSTEP);
+    mv_init_matrix_header(&UV, 3, 1, MV_64FC1, uv, MV_AUTOSTEP);
     mv_matrix_mul(T, &XY, &UV);
     rslt = mv_point_d_t(uv[0] / uv[2], uv[1] / uv[2]);
 

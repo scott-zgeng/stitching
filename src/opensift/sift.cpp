@@ -151,7 +151,7 @@ int _sift_features(mv_image_t* img, mv_features* features, int intvls,
     //mv_seq_sort(features, (CvCmpFunc)feature_cmp, NULL);
     /*n = features->total;
     *feat = (struct feature*)calloc(n, sizeof(struct feature));
-    *feat = (struct feature*)mv_cvt_seq_2_array(features, *feat, CV_WHOLE_SEQ);
+    *feat = (struct feature*)mv_cvt_seq_2_array(features, *feat, MV_WHOLE_SEQ);
     for (i = 0; i < n; i++)
     {
         free((*feat)[i].feature_data);
@@ -187,15 +187,15 @@ static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
         sig_diff = sqrt(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4);
         dbl = mv_create_image(mv_size_t(img->width * 2, img->height * 2),
             IPL_DEPTH_32F, 1);
-        mv_resize(gray, dbl, CV_INTER_CUBIC);
-        mv_smooth(dbl, dbl, CV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
+        mv_resize(gray, dbl, MV_INTER_CUBIC);
+        mv_smooth(dbl, dbl, MV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
         mv_release_image(&gray);
         return dbl;
     }
     else
     {
         sig_diff = sqrt(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA);
-        mv_smooth(gray, gray, CV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
+        mv_smooth(gray, gray, MV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
         return gray;
     }
 }
@@ -210,9 +210,7 @@ static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
   @return Returns a 32-bit grayscale image
   */
 static mv_image_t* convert_to_gray32(mv_image_t* img)
-{
-
-    const int MV_BGR2GRAY = 6;
+{    
     mv_image_t* gray8, *gray32;
 
     gray32 = mv_create_image(mv_get_size(img), IPL_DEPTH_32F, 1);
@@ -221,7 +219,7 @@ static mv_image_t* convert_to_gray32(mv_image_t* img)
     else
     {
         gray8 = mv_create_image(mv_get_size(img), IPL_DEPTH_8U, 1);
-        mv_cvt_color(img, gray8, MV_BGR2GRAY);
+        mv_cvt_bgr_gray(img, gray8);
     }
     mv_convert_scale(gray8, gray32, 1.0 / 255.0, 0);
 
@@ -287,7 +285,7 @@ static mv_image_t*** build_gauss_pyr(mv_image_t* base, int octvs,
             gauss_pyr[o][i] = mv_create_image(mv_get_size(gauss_pyr[o][i - 1]),
                 IPL_DEPTH_32F, 1);
             mv_smooth(gauss_pyr[o][i - 1], gauss_pyr[o][i],
-                CV_GAUSSIAN, 0, 0, sig[i], sig[i]);
+                MV_GAUSSIAN, 0, 0, sig[i], sig[i]);
         }
     }
 
@@ -308,7 +306,7 @@ static mv_image_t* downsample(mv_image_t* img)
 {
     mv_image_t* smaller = mv_create_image(mv_size_t(img->width / 2, img->height / 2),
         img->depth, img->nChannels);
-    mv_resize(img, smaller, CV_INTER_NN);
+    mv_resize(img, smaller, MV_INTER_NN);
 
     return smaller;
 }
@@ -538,9 +536,9 @@ static void interp_step(mv_image_t*** dog_pyr, int octv, int intvl, int r, int c
 
     dD = deriv_3D(dog_pyr, octv, intvl, r, c);
     H = hessian_3D(dog_pyr, octv, intvl, r, c);
-    H_inv = mv_create_matrix(3, 3, CV_64FC1);
-    mv_invert(H, H_inv, CV_SVD);
-    mv_init_matrix_header(&X, 3, 1, CV_64FC1, x, CV_AUTOSTEP);
+    H_inv = mv_create_matrix(3, 3, MV_64FC1);
+    mv_invert(H, H_inv, MV_SVD);
+    mv_init_matrix_header(&X, 3, 1, MV_64FC1, x, MV_AUTOSTEP);
     mv_matrix_mul_add_ex(H_inv, dD, -1, NULL, 0, &X, 0);
 
     mv_release_matrix(&dD);
@@ -579,7 +577,7 @@ static mv_matrix_t* deriv_3D(mv_image_t*** dog_pyr, int octv, int intvl, int r, 
     ds = (pixval32f(dog_pyr[octv][intvl + 1], r, c) -
         pixval32f(dog_pyr[octv][intvl - 1], r, c)) / 2.0;
 
-    dI = mv_create_matrix(3, 1, CV_64FC1);
+    dI = mv_create_matrix(3, 1, MV_64FC1);
     mv_matrix_set(dI, 0, 0, dx);
     mv_matrix_set(dI, 1, 0, dy);
     mv_matrix_set(dI, 2, 0, ds);
@@ -630,7 +628,7 @@ static mv_matrix_t* hessian_3D(mv_image_t*** dog_pyr, int octv, int intvl, int r
         pixval32f(dog_pyr[octv][intvl - 1], r + 1, c) +
         pixval32f(dog_pyr[octv][intvl - 1], r - 1, c)) / 4.0;
 
-    H = mv_create_matrix(3, 3, CV_64FC1);
+    H = mv_create_matrix(3, 3, MV_64FC1);
     mv_matrix_set(H, 0, 0, dxx);
     mv_matrix_set(H, 0, 1, dxy);
     mv_matrix_set(H, 0, 2, dxs);
@@ -667,10 +665,10 @@ static double interp_contr(mv_image_t*** dog_pyr, int octv, int intvl, int r,
     mv_matrix_t* dD, X, T;
     double t[1], x[3] = { xc, xr, xi };
 
-    mv_init_matrix_header(&X, 3, 1, CV_64FC1, x, CV_AUTOSTEP);
-    mv_init_matrix_header(&T, 1, 1, CV_64FC1, t, CV_AUTOSTEP);
+    mv_init_matrix_header(&X, 3, 1, MV_64FC1, x, MV_AUTOSTEP);
+    mv_init_matrix_header(&T, 1, 1, MV_64FC1, t, MV_AUTOSTEP);
     dD = deriv_3D(dog_pyr, octv, intvl, r, c);
-    mv_matrix_mul_add_ex(dD, &X, 1, NULL, 0, &T, CV_GEMM_A_T);
+    mv_matrix_mul_add_ex(dD, &X, 1, NULL, 0, &T, MV_GEMM_A_T);
     mv_release_matrix(&dD);
 
     return pixval32f(dog_pyr[octv][intvl], r, c) + t[0] * 0.5;

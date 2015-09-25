@@ -379,7 +379,7 @@ void display_big_img(mv_image_t* img, char* title)
 
         small = mv_create_image(mv_size_t(img->width * scale, img->height * scale),
             img->depth, img->nChannels);
-        mv_resize(img, small, CV_INTER_AREA);
+        mv_resize(img, small, MV_INTER_AREA);
     }
     else
         small = mv_clone_image(img);
