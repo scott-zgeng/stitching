@@ -187,7 +187,7 @@ static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
         sig_diff = sqrt(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4);
         dbl = mv_create_image(mv_size_t(img->width * 2, img->height * 2),
             IPL_DEPTH_32F, 1);
-        mv_resize(gray, dbl, MV_INTER_CUBIC);
+        mv_resize_cubic(gray, dbl);
         mv_smooth(dbl, dbl, MV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
         mv_release_image(&gray);
         return dbl;
@@ -221,7 +221,7 @@ static mv_image_t* convert_to_gray32(mv_image_t* img)
         gray8 = mv_create_image(mv_get_size(img), IPL_DEPTH_8U, 1);
         mv_cvt_bgr_gray(img, gray8);
     }
-    mv_convert_scale(gray8, gray32, 1.0 / 255.0, 0);
+    mv_normalize_u8(gray8, gray32, 1.0 / 255.0);
 
     mv_release_image(&gray8);
     return gray32;
@@ -306,7 +306,7 @@ static mv_image_t* downsample(mv_image_t* img)
 {
     mv_image_t* smaller = mv_create_image(mv_size_t(img->width / 2, img->height / 2),
         img->depth, img->nChannels);
-    mv_resize(img, smaller, MV_INTER_NN);
+    mv_resize_nn(img, smaller);
 
     return smaller;
 }

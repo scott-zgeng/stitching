@@ -310,37 +310,37 @@ void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color)
 
   @return Returns the image resulting from stacking \a img1 on top if \a img2
   */
-extern mv_image_t* stack_imgs(mv_image_t* img1, mv_image_t* img2)
-{
-    mv_image_t* stacked = mv_create_image(mv_size_t(MAX(img1->width, img2->width),
-        img1->height + img2->height),
-        IPL_DEPTH_8U, 3);
+//extern mv_image_t* stack_imgs(mv_image_t* img1, mv_image_t* img2)
+//{
+//    mv_image_t* stacked = mv_create_image(mv_size_t(MAX(img1->width, img2->width),
+//        img1->height + img2->height),
+//        IPL_DEPTH_8U, 3);
+//
+//    mv_set_zero(stacked);
+//    mv_set_image_roi(stacked, mv_rect_t(0, 0, img1->width, img1->height));
+//    mv_add(img1, stacked, stacked, NULL);
+//    mv_set_image_roi(stacked, mv_rect_t(0, img1->height, img2->width, img2->height));
+//    mv_add(img2, stacked, stacked, NULL);
+//    mv_reset_image_roi(stacked);
+//
+//    return stacked;
+//}
 
-    mv_set_zero(stacked);
-    mv_set_image_roi(stacked, mv_rect_t(0, 0, img1->width, img1->height));
-    mv_add(img1, stacked, stacked, NULL);
-    mv_set_image_roi(stacked, mv_rect_t(0, img1->height, img2->width, img2->height));
-    mv_add(img2, stacked, stacked, NULL);
-    mv_reset_image_roi(stacked);
 
-    return stacked;
-}
-
-
-extern mv_image_t* stack_imgs_horizontal(mv_image_t* img1, mv_image_t* img2)
-{
-    
-    mv_image_t * stacked = mv_create_image(mv_size_t(img1->width + img2->width, MAX(img1->height, img2->height)),
-        IPL_DEPTH_8U, 3);
-    mv_set_zero(stacked);
-    mv_set_image_roi(stacked, mv_rect_t(0, 0, img1->width, img1->height));
-    mv_add(img1, stacked, stacked, NULL);
-    mv_set_image_roi(stacked, mv_rect_t(img1->width, 0, img2->width, img2->height));
-    mv_add(img2, stacked, stacked, NULL);
-    mv_reset_image_roi(stacked);
-
-    return stacked;
-}
+//extern mv_image_t* stack_imgs_horizontal(mv_image_t* img1, mv_image_t* img2)
+//{
+//    
+//    mv_image_t * stacked = mv_create_image(mv_size_t(img1->width + img2->width, MAX(img1->height, img2->height)),
+//        IPL_DEPTH_8U, 3);
+//    mv_set_zero(stacked);
+//    mv_set_image_roi(stacked, mv_rect_t(0, 0, img1->width, img1->height));
+//    mv_add(img1, stacked, stacked, NULL);
+//    mv_set_image_roi(stacked, mv_rect_t(img1->width, 0, img2->width, img2->height));
+//    mv_add(img2, stacked, stacked, NULL);
+//    mv_reset_image_roi(stacked);
+//
+//    return stacked;
+//}
 
 
 /*
@@ -351,43 +351,43 @@ extern mv_image_t* stack_imgs_horizontal(mv_image_t* img1, mv_image_t* img2)
   @param img an image, possibly too large to display on-screen
   @param title the title of the window in which \a img is displayed
   */
-void display_big_img(mv_image_t* img, char* title)
-{
-    mv_image_t* small;
-    //GdkScreen* scr;
-    int scr_width, scr_height;
-    double img_aspect, scr_aspect, scale;
-
-    /* determine screen size to see if image fits on screen */
-    //gdk_init(NULL, NULL);
-    //scr = gdk_screen_get_default();
-    //scr_width = gdk_screen_get_width(scr);
-    //scr_height = gdk_screen_get_height(scr);
-    scr_width = 1680;
-    scr_height = 1050;
-
-
-    if (img->width >= 0.90 * scr_width || img->height >= 0.90 * scr_height)
-    {
-        img_aspect = (double)(img->width) / img->height;
-        scr_aspect = (double)(scr_width) / scr_height;
-
-        if (img_aspect > scr_aspect)
-            scale = 0.90 * scr_width / img->width;
-        else
-            scale = 0.90 * scr_height / img->height;
-
-        small = mv_create_image(mv_size_t(img->width * scale, img->height * scale),
-            img->depth, img->nChannels);
-        mv_resize(img, small, MV_INTER_AREA);
-    }
-    else
-        small = mv_clone_image(img);
-
-    mv_named_window(title);
-    mv_show_image(title, small);
-    mv_release_image(&small);
-}
+//void display_big_img(mv_image_t* img, char* title)
+//{
+//    mv_image_t* small;
+//    //GdkScreen* scr;
+//    int scr_width, scr_height;
+//    double img_aspect, scr_aspect, scale;
+//
+//    /* determine screen size to see if image fits on screen */
+//    //gdk_init(NULL, NULL);
+//    //scr = gdk_screen_get_default();
+//    //scr_width = gdk_screen_get_width(scr);
+//    //scr_height = gdk_screen_get_height(scr);
+//    scr_width = 1680;
+//    scr_height = 1050;
+//
+//
+//    if (img->width >= 0.90 * scr_width || img->height >= 0.90 * scr_height)
+//    {
+//        img_aspect = (double)(img->width) / img->height;
+//        scr_aspect = (double)(scr_width) / scr_height;
+//
+//        if (img_aspect > scr_aspect)
+//            scale = 0.90 * scr_width / img->width;
+//        else
+//            scale = 0.90 * scr_height / img->height;
+//
+//        small = mv_create_image(mv_size_t(img->width * scale, img->height * scale),
+//            img->depth, img->nChannels);
+//        mv_resize(img, small, MV_INTER_AREA);
+//    }
+//    else
+//        small = mv_clone_image(img);
+//
+//    mv_named_window(title);
+//    mv_show_image(title, small);
+//    mv_release_image(&small);
+//}
 
 
 
@@ -409,79 +409,79 @@ void display_big_img(mv_image_t* img, char* title)
   @param imgs an array of images
   @param n number of images in \a imgs
   @param win_name name of window in which images are displayed
-  */
-void vid_view(mv_image_t** imgs, int n, char* win_name)
-{
-    int k, i = 0, playing = 0;
-
-    display_big_img(imgs[i], win_name);
-    while (!win_closed(win_name))
-    {
-        /* if already playing, advance frame and check for pause */
-        if (playing)
-        {
-            i = MIN(i + 1, n - 1);
-            display_big_img(imgs[i], win_name);
-            k = mv_wait_key(33);
-            if (k == ' ' || i == n - 1)
-                playing = 0;
-        }
-
-        else
-        {
-            k = mv_wait_key(0);
-            
-            switch (k)
-            {
-                /* space */
-            case ' ':
-                playing = 1;
-                break;
-
-                /* esc */
-            case 27:
-            case 1048603:
-                mv_destroy_window(win_name);
-                break;
-
-                /* backspace */
-            case '\b':
-                i = 0;
-                display_big_img(imgs[i], win_name);
-                break;
-
-                /* left arrow */
-            case 65288:
-            case 1113937:
-                i = MAX(i - 1, 0);
-                display_big_img(imgs[i], win_name);
-                break;
-
-                /* right arrow */
-            case 65363:
-            case 1113939:
-                i = MIN(i + 1, n - 1);
-                display_big_img(imgs[i], win_name);
-                break;
-
-                /* page up */
-            case 65365:
-            case 1113941:
-                i = MAX(i - 10, 0);
-                display_big_img(imgs[i], win_name);
-                break;
-
-                /* page down */
-            case 65366:
-            case 1113942:
-                i = MIN(i + 10, n - 1);
-                display_big_img(imgs[i], win_name);
-                break;
-            }
-        }
-    }
-}
-
+//  */
+//void vid_view(mv_image_t** imgs, int n, char* win_name)
+//{
+//    int k, i = 0, playing = 0;
+//
+//    display_big_img(imgs[i], win_name);
+//    while (!win_closed(win_name))
+//    {
+//        /* if already playing, advance frame and check for pause */
+//        if (playing)
+//        {
+//            i = MIN(i + 1, n - 1);
+//            display_big_img(imgs[i], win_name);
+//            k = mv_wait_key(33);
+//            if (k == ' ' || i == n - 1)
+//                playing = 0;
+//        }
+//
+//        else
+//        {
+//            k = mv_wait_key(0);
+//            
+//            switch (k)
+//            {
+//                /* space */
+//            case ' ':
+//                playing = 1;
+//                break;
+//
+//                /* esc */
+//            case 27:
+//            case 1048603:
+//                mv_destroy_window(win_name);
+//                break;
+//
+//                /* backspace */
+//            case '\b':
+//                i = 0;
+//                display_big_img(imgs[i], win_name);
+//                break;
+//
+//                /* left arrow */
+//            case 65288:
+//            case 1113937:
+//                i = MAX(i - 1, 0);
+//                display_big_img(imgs[i], win_name);
+//                break;
+//
+//                /* right arrow */
+//            case 65363:
+//            case 1113939:
+//                i = MIN(i + 1, n - 1);
+//                display_big_img(imgs[i], win_name);
+//                break;
+//
+//                /* page up */
+//            case 65365:
+//            case 1113941:
+//                i = MAX(i - 10, 0);
+//                display_big_img(imgs[i], win_name);
+//                break;
+//
+//                /* page down */
+//            case 65366:
+//            case 1113942:
+//                i = MIN(i + 10, n - 1);
+//                display_big_img(imgs[i], win_name);
+//                break;
+//            }
+//        }
+//    }
+//}
+//
 
 
 /*

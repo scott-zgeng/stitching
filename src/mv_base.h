@@ -139,11 +139,11 @@
 
 
 
-#define MV_INTER_NN 0
-#define MV_INTER_LINEAR  1
-#define MV_INTER_CUBIC  2
-#define MV_INTER_AREA  3
-#define MV_INTER_LANCZOS4  4
+//#define MV_INTER_NN 0
+//#define MV_INTER_LINEAR  1
+//#define MV_INTER_CUBIC  2
+//#define MV_INTER_AREA  3
+//#define MV_INTER_LANCZOS4  4
 
 #define MV_WARP_FILL_OUTLIERS  8
 #define MV_WARP_INVERSE_MAP 16
@@ -189,7 +189,6 @@ image that is computed using integral */
 #define MV_AUTOSTEP  0x7fffffff
 
 
-typedef unsigned char mv_byte;
 
 struct mv_roi_t
 {
@@ -478,6 +477,114 @@ inline void  mv_matrix_set(mv_matrix_t* mat, int row, int col, double value)
 
 
 
+
+
+typedef bool mv_bool;
+typedef char mv_char;
+typedef unsigned char mv_byte;
+typedef int mv_result;
+
+typedef char mv_int8;
+typedef unsigned char mv_uint8;
+typedef short mv_int16;
+typedef unsigned short mv_uint16;
+typedef int mv_int32;
+typedef unsigned int mv_uint32;
+typedef long long mv_int64;
+typedef unsigned long long mv_uint64;
+typedef float mv_float;
+typedef double mv_double;
+
+
+
+
+/////////////// saturate_cast (used in image & signal processing) ///////////////////
+
+/**
+Template function for accurate conversion from one primitive type to another.
+
+The functions saturate_cast resemble the standard C++ cast operations, such as static_cast\<T\>()
+and others. They perform an efficient and accurate conversion from one primitive type to another
+(see the introduction chapter). saturate in the name means that when the input value v is out of the
+range of the target type, the result is not formed just by taking low bits of the input, but instead
+the value is clipped. For example:
+@code
+uchar a = saturate_cast<uchar>(-100); // a = 0 (UCHAR_MIN)
+short b = saturate_cast<short>(33333.33333); // b = 32767 (SHRT_MAX)
+@endcode
+Such clipping is done when the target type is unsigned char , signed char , unsigned short or
+signed short . For 32-bit integers, no clipping is done.
+
+When the parameter is a floating-point value and the target type is an integer (8-, 16- or 32-bit),
+the floating-point value is first rounded to the nearest integer and then clipped if needed (when
+the target type is 8- or 16-bit).
+
+This operation is used in the simplest or most complex image processing functions in OpenCV.
+*/
+
+template<typename _Tp> static inline _Tp saturate_cast(mv_int8 v)   { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_uint8 v)  { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_int16 v)  { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_uint16 v) { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_int32 v)  { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_uint32 v) { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_int64 v)  { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_uint64 v) { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_float v)  { return _Tp(v); }
+template<typename _Tp> static inline _Tp saturate_cast(mv_double v) { return _Tp(v); }
+
+
+
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_uint8 v)        { return (mv_int8)MIN((mv_int32)v, SCHAR_MAX); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_int16 v)        { return (mv_int8)((mv_uint32)(v - SCHAR_MIN) <= (mv_uint32)UCHAR_MAX ? v : v > 0 ? SCHAR_MAX : SCHAR_MIN); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_uint16 v)       { return (mv_int8)MIN((mv_uint32)v, (mv_uint32)SCHAR_MAX); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_int32 v)        { return (mv_int8)((mv_uint32)(v - SCHAR_MIN) <= (mv_uint32)UCHAR_MAX ? v : v > 0 ? SCHAR_MAX : SCHAR_MIN); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_uint32 v)       { return (mv_int8)MIN(v, (mv_uint32)SCHAR_MAX); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_int64 v)        { return (mv_int8)((mv_uint64)((mv_int64)v - SCHAR_MIN) <= (mv_uint64)UCHAR_MAX ? v : v > 0 ? SCHAR_MAX : SCHAR_MIN); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_uint64 v)       { return (mv_int8)MIN(v, (mv_uint64)SCHAR_MAX); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_float v)        { mv_int32 iv = mv_round(v); return saturate_cast<mv_int8>(iv); }
+template<> inline mv_int8 saturate_cast<mv_int8>(mv_double v)       { mv_int32 iv = mv_round(v); return saturate_cast<mv_int8>(iv); }
+
+
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_int8 v)       { return (mv_uint8)MAX((mv_int32)v, 0); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_int16 v)      { return (mv_uint8)((mv_uint32)v <= UCHAR_MAX ? v : v > 0 ? UCHAR_MAX : 0); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_uint16 v)     { return (mv_uint8)MIN((mv_uint32)v, (mv_uint32)UCHAR_MAX); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_int32 v)      { return (mv_uint8)((mv_uint32)v <= UCHAR_MAX ? v : v > 0 ? UCHAR_MAX : 0); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_uint32 v)     { return (mv_uint8)MIN(v, (mv_uint32)UCHAR_MAX); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_int64 v)      { return (mv_uint8)((mv_uint64)v <= (mv_uint64)UCHAR_MAX ? v : v > 0 ? UCHAR_MAX : 0); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_uint64 v)     { return (mv_uint8)MIN(v, (mv_uint64)UCHAR_MAX); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_float v)      { mv_int32 iv = mv_round(v); return saturate_cast<mv_uint8>(iv); }
+template<> inline mv_uint8 saturate_cast<mv_uint8>(mv_double v)     { mv_int32 iv = mv_round(v); return saturate_cast<mv_uint8>(iv); }
+
+
+template<> inline mv_int16 saturate_cast<mv_int16>(mv_uint16 v)     { return (mv_int16)MIN((mv_int32)v, SHRT_MAX); }
+template<> inline mv_int16 saturate_cast<mv_int16>(mv_int32 v)      { return (mv_int16)((mv_uint32)(v - SHRT_MIN) <= (mv_uint32)USHRT_MAX ? v : v > 0 ? SHRT_MAX : SHRT_MIN); }
+template<> inline mv_int16 saturate_cast<mv_int16>(mv_uint32 v)     { return (mv_int16)MIN(v, (mv_uint32)SHRT_MAX); }
+template<> inline mv_int16 saturate_cast<mv_int16>(mv_int64 v)      { return (mv_int16)((mv_uint64)((mv_int64)v - SHRT_MIN) <= (mv_uint64)USHRT_MAX ? v : v > 0 ? SHRT_MAX : SHRT_MIN); }
+template<> inline mv_int16 saturate_cast<mv_int16>(mv_uint64 v)     { return (mv_int16)MIN(v, (mv_uint64)SHRT_MAX); }
+template<> inline mv_int16 saturate_cast<mv_int16>(mv_float v)      { mv_int32 iv = mv_round(v); return saturate_cast<mv_int16>(iv); }
+template<> inline mv_int16 saturate_cast<mv_int16>(mv_double v)     { mv_int32 iv = mv_round(v); return saturate_cast<mv_int16>(iv); }
+
+
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_int8 v)     { return (mv_uint16)MAX((mv_int32)v, 0); }
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_int16 v)    { return (mv_uint16)MAX((mv_int32)v, 0); }
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_int32 v)    { return (mv_uint16)((mv_uint32)v <= (mv_uint32)USHRT_MAX ? v : v > 0 ? USHRT_MAX : 0); }
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_uint32 v)   { return (mv_uint16)MIN(v, (mv_uint32)USHRT_MAX); }
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_int64 v)    { return (mv_uint16)((mv_uint64)v <= (mv_uint64)USHRT_MAX ? v : v > 0 ? USHRT_MAX : 0); }
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_uint64 v)   { return (mv_uint16)MIN(v, (mv_uint64)USHRT_MAX); }
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_float v)    { mv_int32 iv = mv_round(v); return saturate_cast<mv_uint16>(iv); }
+template<> inline mv_uint16 saturate_cast<mv_uint16>(mv_double v)   { mv_int32 iv = mv_round(v); return saturate_cast<mv_uint16>(iv); }
+
+
+template<> inline mv_int32 saturate_cast<mv_int32>(mv_float v)      { return mv_round(v); }
+template<> inline mv_int32 saturate_cast<mv_int32>(mv_double v)     { return mv_round(v); }
+
+// we intentionally do not clip negative numbers, to make -1 become 0xffffffff etc.
+template<> inline mv_uint32 saturate_cast<mv_uint32>(mv_float v)    { return mv_round(v); }
+template<> inline mv_uint32 saturate_cast<mv_uint32>(mv_double v)   { return mv_round(v); }
+
+
+
 // 15
 void mv_set_zero(mv_image_t* arr);
 mv_image_t* mv_create_image(mv_size_t size, int depth, int channels);
@@ -488,10 +595,13 @@ void mv_reset_image_roi(mv_image_t* image);
 void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst);
 void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
 void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
-void mv_resize(const mv_image_t* src, mv_image_t* dst, int interpolation);
+
+
+void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst);
+void mv_resize_nn(const mv_image_t* src, mv_image_t* dst);
 mv_size_t mv_get_size(const mv_image_t* arr);
-void mv_cvt_bgr_gray(const mv_image_t* src, mv_image_t* dst);
-void mv_convert_scale(const mv_image_t* src, mv_image_t* dst, double scale, double shift);
+void mv_cvt_bgr_gray(const mv_image_t* src, mv_image_t* dst); // [OK]
+void mv_normalize_u8(const mv_image_t* src, mv_image_t* dst, double scale); // [OK]
 void mv_smooth(const mv_image_t* src, mv_image_t* dst, int smoothtype, int size1, int size2, double sigma1, double sigma2);
 void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix_t* map_matrix, int flags, mv_scalar_t fillval);
 
