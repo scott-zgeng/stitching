@@ -232,8 +232,8 @@ void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color);
 
    @return Returns the image resulting from stacking \a img1 on top if \a img2
    */
-mv_image_t* stack_imgs(mv_image_t* img1, mv_image_t* img2);
-mv_image_t* stack_imgs_horizontal(mv_image_t* img1, mv_image_t* img2);
+//mv_image_t* stack_imgs(mv_image_t* img1, mv_image_t* img2);
+//mv_image_t* stack_imgs_horizontal(mv_image_t* img1, mv_image_t* img2);
 
 
 /**

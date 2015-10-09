@@ -249,6 +249,7 @@ void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, con
 
 
 
+
 template<typename T, typename WT, typename AT>
 struct HResizeCubic
 {
@@ -301,110 +302,181 @@ struct HResizeCubic
 };
 
 
-
-static inline void interpolate_cubic(float x, float* coeffs)
+template<typename ST, typename DT, int bits> struct FixedPtCast
 {
-    const float A = -0.75f;
+    typedef ST type1;
+    typedef DT rtype;
+    enum { SHIFT = bits, DELTA = 1 << (bits - 1) };
 
-    coeffs[0] = ((A*(x + 1) - 5 * A)*(x + 1) + 8 * A)*(x + 1) - 4 * A;
-    coeffs[1] = ((A + 2)*x - (A + 3))*x*x + 1;
-    coeffs[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
-    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
-}
-
-class resize_cubic
-{
-    static const int MAX_ESIZE = 16;
-    static const int INTER_RESIZE_COEF_BITS = 11;
-    static const int INTER_RESIZE_COEF_SCALE = 1 << INTER_RESIZE_COEF_BITS;
-
-
-public:
-    resize_cubic();
-    ~resize_cubic();
-
-public:
-    mv_result init(mv_size_t ssize, mv_size_t dsize) {
-
-        double inv_scale_x = (double)dsize.width / ssize.width;
-        double inv_scale_y = (double)dsize.height / ssize.height;
-
-        int cn = 1;  //channel number
-
-        double scale_x = 1.0 / inv_scale_x;
-        double scale_y = 1.0 / inv_scale_y;
-
-        int xmin = 0;
-        int xmax = dsize.width;        
-
-        float fx, fy;
-        int ksize = 4;
-        int ksize2 = ksize / 2;
-
-        int* xofs = (int*)mv_malloc(dsize.width*sizeof(int));
-        int* yofs = (int*)mv_malloc(dsize.height*sizeof(int));
-        short* ialpha = (short*)mv_malloc(dsize.width*ksize*sizeof(short));
-        short* ibeta = (short*)mv_malloc(dsize.height*ksize*sizeof(short));
-        
-
-
-        int k, sx, sy, dx, dy;
-
-        for (int dx = 0; dx < dsize.width; dx++) {
-            fx = (float)((dx + 0.5)*scale_x - 0.5);
-            sx = mv_floor(fx);
-            fx -= sx;
-
-            if (sx < ksize2 - 1)
-                xmin = dx + 1;
-
-            if (sx + ksize2 >= ssize.width)
-                xmax = MAX(xmax, dx);
-
-            for (k = 0, sx *= cn; k < cn; k++)
-                xofs[dx*cn + k] = sx + k;
-
-            interpolate_cubic(fx, cbuf);
-
-            for (k = 0; k < ksize; k++)
-                ialpha[dx*cn*ksize + k] = saturate_cast<short>(cbuf[k] * INTER_RESIZE_COEF_SCALE);
-
-            for (; k < cn*ksize; k++)
-                ialpha[dx*cn*ksize + k] = ialpha[dx*cn*ksize + k - ksize];
-
-        }
-
-        for (dy = 0; dy < dsize.height; dy++) {
-            fy = (float)((dy + 0.5)*scale_y - 0.5);
-            sy = cvFloor(fy);
-            fy -= sy;
-
-            yofs[dy] = sy;
-
-            interpolate_cubic(fy, cbuf);
-
-            for (k = 0; k < ksize; k++)
-                ibeta[dy*ksize + k] = saturate_cast<short>(cbuf[k] * INTER_RESIZE_COEF_SCALE);
-        }
-    }
-
-
-    void operator()(const mv_image_t* src, mv_image_t* dst) {
-
-
-        //ResizeFunc func = cubic_tab[depth];
-        func(src, dst, xofs, (void*)ialpha, yofs, (void*)ibeta, xmin, xmax, ksize);
-    }
-
-private:
-    int* xofs;
-    int* yofs;
-    short* ialpha;
-    short* ibeta;
-    float cbuf[MAX_ESIZE];
+    DT operator()(ST val) const { return saturate_cast<DT>((val + DELTA) >> SHIFT); }
 };
 
 
+
+template<typename T, typename WT, typename AT, class CastOp>
+struct VResizeCubic
+{
+    typedef T value_type;
+    typedef WT buf_type;
+    typedef AT alpha_type;
+
+    void operator()(const WT** src, T* dst, const AT* beta, int width) const
+    {
+        WT b0 = beta[0], b1 = beta[1], b2 = beta[2], b3 = beta[3];
+        const WT *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
+        CastOp castOp;
+
+        for (int x = 0; x < width; x++)
+            dst[x] = castOp(S0[x] * b0 + S1[x] * b1 + S2[x] * b2 + S3[x] * b3);
+    }
+};
+
+
+
+
+
+mv_result resize_cubic::init(mv_size_t ssize, mv_size_t dsize) {
+
+    m_ssize = ssize;
+    m_dsize = dsize;
+
+    double inv_scale_x = (double)dsize.width / ssize.width;
+    double inv_scale_y = (double)dsize.height / ssize.height;
+
+    int cn = 1;  //channel number
+
+    double scale_x = 1.0 / inv_scale_x;
+    double scale_y = 1.0 / inv_scale_y;
+
+    m_xmin = 0;
+    m_xmax = dsize.width;        
+
+    m_ksize = 4;
+    int ksize2 = m_ksize / 2;
+
+    m_xofs = (int*)mv_malloc(dsize.width*sizeof(int));
+    m_yofs = (int*)mv_malloc(dsize.height*sizeof(int));
+    m_alpha = (short*)mv_malloc(dsize.width*m_ksize*sizeof(short));
+    m_beta = (short*)mv_malloc(dsize.height*m_ksize*sizeof(short));
+        
+
+    int k, sx, sy, dx, dy;
+    float fx, fy;
+    for (int dx = 0; dx < dsize.width; dx++) {
+        fx = (float)((dx + 0.5)*scale_x - 0.5);
+        sx = mv_floor(fx);
+        fx -= sx;
+
+        if (sx < ksize2 - 1)
+            m_xmin = dx + 1;
+
+        if (sx + ksize2 >= ssize.width)
+            m_xmax = MAX(m_xmax, dx);
+
+        for (k = 0, sx *= cn; k < cn; k++)
+            m_xofs[dx*cn + k] = sx + k;
+
+        interpolate_cubic(fx, m_cbuf);
+
+        for (k = 0; k < m_ksize; k++)
+            m_alpha[dx*cn*m_ksize + k] = saturate_cast<short>(m_cbuf[k] * INTER_RESIZE_COEF_SCALE);
+
+        for (; k < cn*m_ksize; k++)
+            m_alpha[dx*cn*m_ksize + k] = m_alpha[dx*cn*m_ksize + k - m_ksize];
+
+    }
+
+    for (dy = 0; dy < dsize.height; dy++) {
+        fy = (float)((dy + 0.5)*scale_y - 0.5);
+        sy = mv_floor(fy);
+        fy -= sy;
+
+        m_yofs[dy] = sy;
+
+        interpolate_cubic(fy, m_cbuf);
+
+        for (k = 0; k < m_ksize; k++)
+            m_beta[dy*m_ksize + k] = saturate_cast<short>(m_cbuf[k] * INTER_RESIZE_COEF_SCALE);
+    }
+
+    return MV_SUCCEEDED;
+}
+
+static inline int clip(int x, int a, int b)
+{
+    return x >= a ? (x < b ? x : b - 1) : a;
+}
+
+
+static inline size_t align_size(size_t sz, int n)
+{    
+    return (sz + n - 1) & -n;
+}
+
+void resize_cubic::operator()(const mv_image_t* src, mv_image_t* dst) 
+{
+    HResizeCubic<uchar, int, short> hresize;
+    VResizeCubic<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS * 2> > vresize;
+
+    int cn = src->nChannels;
+
+    
+    int bufstep = (int)align_size(m_dsize.width, 16);
+    AutoBuffer<int> _buffer(bufstep*m_ksize);
+
+    const uchar* srows[MAX_ESIZE] = { 0 };
+    int* rows[MAX_ESIZE] = { 0 };
+    int prev_sy[MAX_ESIZE];
+
+    for (int k = 0; k < m_ksize; k++)
+    {
+        prev_sy[k] = -1;
+        rows[k] = (int*)_buffer + bufstep*k;
+    }
+
+
+    int ksize2 = m_ksize / 2;
+    const short* beta = m_beta;
+
+
+    for (int dy = 0; dy < m_dsize.height; dy++, beta += m_ksize)
+    {
+        int sy0 = m_yofs[dy], k0 = m_ksize, k1 = 0;
+
+        for (int k = 0; k < m_ksize; k++)
+        {
+            int sy = clip(sy0 - ksize2 + 1 + k, 0, m_ssize.height);
+            for (int k1 = MAX(k1, k); k1 < m_ksize; k1++)
+            {
+                if (sy == prev_sy[k1]) // if the sy-th row has been computed already, reuse it.
+                {
+                    if (k1 > k)
+                        memcpy(rows[k], rows[k1], bufstep*sizeof(rows[0][0]));
+                    break;
+                }
+            }
+            if (k1 == m_ksize)
+                k0 = std::min(k0, k); // remember the first row that needs to be computed
+            //srows[k] = src->imageData; .template ptr<uchar>(sy);
+            prev_sy[k] = sy;
+        }
+
+        if (k0 < m_ksize) {
+            hresize((const uchar**)(srows + k0), (int**)(rows + k0), m_ksize - k0, m_xofs,
+                m_alpha, m_ssize.width, m_dsize.width, cn, m_xmin, m_xmax);
+        }
+
+        vresize((const int**)rows, (uchar*)(dst->imageData + dst->widthStep*dy), beta, m_dsize.width);
+    }
+
+
+}
+
+
+void mv_resize_nn(const mv_image_t* src, mv_image_t* dst)
+{
+
+}
 
 mv_size_t mv_get_size(const mv_image_t* image)
 {

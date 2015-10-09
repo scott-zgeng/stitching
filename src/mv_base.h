@@ -10,6 +10,24 @@
 #include <stdlib.h>
 
 
+
+typedef bool mv_bool;
+typedef char mv_char;
+typedef unsigned char mv_byte;
+typedef int mv_result;
+
+typedef char mv_int8;
+typedef unsigned char mv_uint8;
+typedef short mv_int16;
+typedef unsigned short mv_uint16;
+typedef int mv_int32;
+typedef unsigned int mv_uint32;
+typedef long long mv_int64;
+typedef unsigned long long mv_uint64;
+typedef float mv_float;
+typedef double mv_double;
+
+
 // fundamental constants 
 #define MV_PI   3.1415926535897932384626433832795
 #define MV_LOG2 0.69314718055994530941723212145818
@@ -140,7 +158,7 @@
 
 
 //#define MV_INTER_NN 0
-//#define MV_INTER_LINEAR  1
+#define MV_INTER_LINEAR  1
 //#define MV_INTER_CUBIC  2
 //#define MV_INTER_AREA  3
 //#define MV_INTER_LANCZOS4  4
@@ -380,6 +398,47 @@ struct mv_matrix_t
 
 
 
+class resize_cubic
+{
+    static const int MAX_ESIZE = 16;
+    static const int INTER_RESIZE_COEF_BITS = 11;
+    static const int INTER_RESIZE_COEF_SCALE = 1 << INTER_RESIZE_COEF_BITS;
+
+
+public:
+    resize_cubic() {}
+    ~resize_cubic() {}
+
+public:
+    mv_result init(mv_size_t ssize, mv_size_t dsize);
+    void operator()(const mv_image_t* src, mv_image_t* dst);
+
+
+private:
+    inline void interpolate_cubic(float x, float* coeffs)
+    {
+        const float A = -0.75f;
+
+        coeffs[0] = ((A*(x + 1) - 5 * A)*(x + 1) + 8 * A)*(x + 1) - 4 * A;
+        coeffs[1] = ((A + 2)*x - (A + 3))*x*x + 1;
+        coeffs[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
+        coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
+    }
+
+
+private:
+    int* m_xofs;
+    int* m_yofs;
+    short* m_alpha;
+    short* m_beta;
+    int m_xmin;
+    int m_xmax;
+    int m_ksize;
+    mv_size_t m_ssize;
+    mv_size_t m_dsize;
+    float m_cbuf[MAX_ESIZE];
+};
+
 
 
 
@@ -477,23 +536,6 @@ inline void  mv_matrix_set(mv_matrix_t* mat, int row, int col, double value)
 
 
 
-
-
-typedef bool mv_bool;
-typedef char mv_char;
-typedef unsigned char mv_byte;
-typedef int mv_result;
-
-typedef char mv_int8;
-typedef unsigned char mv_uint8;
-typedef short mv_int16;
-typedef unsigned short mv_uint16;
-typedef int mv_int32;
-typedef unsigned int mv_uint32;
-typedef long long mv_int64;
-typedef unsigned long long mv_uint64;
-typedef float mv_float;
-typedef double mv_double;
 
 
 
@@ -597,7 +639,7 @@ void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, con
 void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
 
 
-void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst);
+//void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst);
 void mv_resize_nn(const mv_image_t* src, mv_image_t* dst);
 mv_size_t mv_get_size(const mv_image_t* arr);
 void mv_cvt_bgr_gray(const mv_image_t* src, mv_image_t* dst); // [OK]

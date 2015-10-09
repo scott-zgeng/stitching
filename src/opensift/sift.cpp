@@ -176,6 +176,8 @@ int _sift_features(mv_image_t* img, mv_features* features, int intvls,
   @param img_dbl if true, image is doubled in size prior to smoothing
   @param sigma total std of Gaussian smoothing
   */
+
+#include "cv.h"
 static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
 {
     mv_image_t* gray, *dbl;
@@ -187,7 +189,13 @@ static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
         sig_diff = sqrt(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4);
         dbl = mv_create_image(mv_size_t(img->width * 2, img->height * 2),
             IPL_DEPTH_32F, 1);
-        mv_resize_cubic(gray, dbl);
+
+        cvResize(gray->org, dbl->org);
+        //mv_resize_cubic
+
+        //resize_cubic cubic;
+        //cubic.init()
+
         mv_smooth(dbl, dbl, MV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
         mv_release_image(&gray);
         return dbl;

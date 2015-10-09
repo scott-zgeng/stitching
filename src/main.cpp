@@ -142,7 +142,7 @@ int main(int argc, char** argv)
     //若能成功计算出变换矩阵，即两幅图中有共同区域
     if (H)
     {        
-        stacked_ransac = stack_imgs_horizontal(img1, img2);//合成图像，显示经RANSAC算法筛选后的匹配结果
+        //stacked_ransac = stack_imgs_horizontal(img1, img2);//合成图像，显示经RANSAC算法筛选后的匹配结果
 
         //img1LeftBound = inliers[0]->fwd_match->x;//图1中匹配点外接矩形的左边界
         //img1RightBound = img1LeftBound;//图1中匹配点外接矩形的右边界
@@ -170,7 +170,7 @@ int main(int argc, char** argv)
                 invertNum++;
             
             pt2.x += img1->width;//由于两幅图是左右排列的，pt2的横坐标加上图1的宽度，作为连线的终点
-            mv_line(stacked_ransac, pt1, pt2, MV_RGB(255, 0, 255), 1, 8, 0);//在匹配图上画出连线
+            //mv_line(stacked_ransac, pt1, pt2, MV_RGB(255, 0, 255), 1, 8, 0);//在匹配图上画出连线
         }
 
         //绘制图1中包围匹配点的矩形
@@ -178,9 +178,9 @@ int main(int argc, char** argv)
         //绘制图2中包围匹配点的矩形
         //cvRectangle(stacked_ransac,cvPoint(img1->width+img2LeftBound,0),cvPoint(img1->width+img2RightBound,img2->height),MV_RGB(0,0,255),2);
 
-        mv_named_window(IMG_MATCH2);//创建窗口
-        mv_show_image(IMG_MATCH2, stacked_ransac);//显示经RANSAC算法筛选后的匹配图
-        mv_wait_key(0);
+        //mv_named_window(IMG_MATCH2);//创建窗口
+        //mv_show_image(IMG_MATCH2, stacked_ransac);//显示经RANSAC算法筛选后的匹配图
+        //mv_wait_key(0);
 
 
         //保存匹配图
