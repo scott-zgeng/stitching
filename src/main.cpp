@@ -16,7 +16,11 @@
 
 #include <stdio.h>
 
+#include "highgui.h"
+
+
 #include "mv_base.h"
+#include "img_proc.h"
 
 
 #pragma comment(lib, "opencv_core300d.lib")
@@ -51,7 +55,9 @@ mv_point_t leftTop, leftBottom, rightTop, rightBottom;
 void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2);
 
 
-int main(int argc, char** argv)
+
+
+int image_stitching(int argc, char** argv)
 {
     WRITE_INFO_LOG("enter main function");
 
@@ -70,13 +76,16 @@ int main(int argc, char** argv)
     const char* imgfile2 = "g2.jpg";
 
 
-    mv_image_t* img1 = mv_load_image(imgfile1, 1);
+
+    mv_image_t* img1 = NULL;
+    //mv_image_t* img1 = mv_load_image(imgfile1, 1);
     if (!img1) {
         WRITE_ERROR_LOG("unable to load image from %s", imgfile1);
         return 1;
     }
 
-    mv_image_t* img2 = mv_load_image(imgfile2, 1);
+    mv_image_t* img2 = NULL;
+    //mv_image_t* img2 = mv_load_image(imgfile2, 1);
     if (!img2) {
         WRITE_ERROR_LOG("unable to load image from %s", imgfile2);
         return 1;
@@ -232,9 +241,9 @@ int main(int argc, char** argv)
         xformed = mv_create_image(mv_size_t(MIN(rightTop.x, rightBottom.x), MIN(img1->height, img2->height)), IPL_DEPTH_8U, 3);
         //用变换矩阵H对右图img2做投影变换(变换后会有坐标右移)，结果放到xformed中
         mv_warp_perspective(img2, xformed, H, MV_INTER_LINEAR + MV_WARP_FILL_OUTLIERS, mv_scalar_t(0));
-        mv_named_window(IMG_MOSAIC_TEMP); //显示临时图,即只将图2变换后的图
-        mv_show_image(IMG_MOSAIC_TEMP, xformed);
-        mv_wait_key(0);
+        cvNamedWindow(IMG_MOSAIC_TEMP); //显示临时图,即只将图2变换后的图
+        //cvShowImage(IMG_MOSAIC_TEMP, xformed);
+        cvWaitKey(0);
 
 
         //简易拼接法：直接将将左图img1叠加到xformed的左边
@@ -242,9 +251,9 @@ int main(int argc, char** argv)
         mv_set_image_roi(xformed_simple, mv_rect_t(0, 0, img1->width, img1->height));
         mv_add_weighted(img1, 1, xformed_simple, 0, 0, xformed_simple);
         mv_reset_image_roi(xformed_simple);
-        mv_named_window(IMG_MOSAIC_SIMPLE);//创建窗口
-        mv_show_image(IMG_MOSAIC_SIMPLE, xformed_simple);//显示简易拼接图
-        mv_wait_key(0);
+        cvNamedWindow(IMG_MOSAIC_SIMPLE);//创建窗口
+        //cvShowImage(IMG_MOSAIC_SIMPLE, xformed_simple);//显示简易拼接图
+        cvWaitKey(0);
 
 
         //处理后的拼接图，克隆自xformed
@@ -258,9 +267,9 @@ int main(int argc, char** argv)
         mv_reset_image_roi(img1);
         mv_reset_image_roi(xformed);
         mv_reset_image_roi(xformed_proc);
-        mv_named_window(IMG_MOSAIC_BEFORE_FUSION);
-        mv_show_image(IMG_MOSAIC_BEFORE_FUSION, xformed_proc);//显示融合之前的拼接图
-        mv_wait_key(0);
+        cvNamedWindow(IMG_MOSAIC_BEFORE_FUSION);
+        //cvShowImage(IMG_MOSAIC_BEFORE_FUSION, xformed_proc);//显示融合之前的拼接图
+        cvWaitKey(0);
 
         //采用加权平均的方法融合重叠区域
         int start = MIN(leftTop.x, leftBottom.x);//开始位置，即重叠区域的左边界
@@ -287,9 +296,9 @@ int main(int argc, char** argv)
                 pixel_xformed_proc[j * 3 + 2] = pixel_img1[j * 3 + 2] * alpha + pixel_xformed[j * 3 + 2] * (1 - alpha);//R通道
             }
         }
-        mv_named_window(IMG_MOSAIC_PROC);//创建窗口
-        mv_show_image(IMG_MOSAIC_PROC, xformed_proc);//显示处理后的拼接图
-        mv_wait_key(0);
+        cvNamedWindow(IMG_MOSAIC_PROC);//创建窗口
+        //cvShowImage(IMG_MOSAIC_PROC, xformed_proc);//显示处理后的拼接图
+        cvWaitKey(0);
 
         //*重叠区域取两幅图像的平均值，效果不好
         //设置ROI，是包含重叠区域的矩形
@@ -374,3 +383,53 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     //cvCircle(xformed,rightBottom,7,MV_RGB(255,0,0),2);
 
 }
+
+
+void show_image(mv_image_t* img)
+{
+    const char* IMG_TEST_1 = "test_windows_1";
+    IplImage* clone = mv_image_mv2cv(img);
+    cvShowImage(IMG_TEST_1, clone);
+    cvWaitKey(0);
+    cvReleaseImage(&clone);
+}
+
+
+int test_image_proc() {
+
+    const char* imgfile1 = "g1.jpg";
+
+    IplImage* img_org = cvLoadImage(imgfile1, 1);
+    mv_image_t* img = mv_image_cv2mv(img_org);    
+    show_image(img);    
+
+    mv_image_t* gray8 = mv_create_image(mv_get_size(img), IPL_DEPTH_8U, 1);
+    mv_convert_gray(img, gray8);   
+    show_image(gray8);
+    
+    mv_image_t* gray8_clone = mv_clone_image(gray8);
+    show_image(gray8_clone);
+
+    mv_image_t* gray32 = mv_create_image(mv_get_size(img), IPL_DEPTH_32F, 1);
+    show_image(gray32);
+
+    mv_normalize_u8(gray8, gray32, 1.0 / 255.0);
+    show_image(gray32);
+
+    mv_image_t* resize = mv_create_image(mv_size_t(img->width * 1.2, img->height * 1.2), IPL_DEPTH_8U, 1);
+    mv_resize_nn(gray8_clone, resize);
+    show_image(resize);
+
+    return 0;
+}
+
+
+int main(int argc, char** argv)
+{
+    test_image_proc();
+    return 0;
+}
+
+
+
+

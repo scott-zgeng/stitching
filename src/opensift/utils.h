@@ -50,10 +50,10 @@ void write_log(int level, const char* file, int line, const char* format, ...);
    @param c column
    @return Returns the value of the pixel at (\a r, \a c) in \a img
    */
-static inline int pixval8(mv_image_t* img, int r, int c)
-{
-    return (int)(((unsigned char*)(img->imageData + img->widthStep*r))[c]);
-}
+//static inline int pixval8(mv_image_t* img, int r, int c)
+//{
+//    return (int)(((unsigned char*)(img->imageData + img->widthStep*r))[c]);
+//}
 
 
 /**
@@ -64,10 +64,10 @@ static inline int pixval8(mv_image_t* img, int r, int c)
    @param c column
    @param val pixel value
    */
-static inline void setpix8(mv_image_t* img, int r, int c, unsigned char val)
-{
-    ((unsigned char*)(img->imageData + img->widthStep*r))[c] = val;
-}
+//static inline void setpix8(mv_image_t* img, int r, int c, unsigned char val)
+//{
+//    ((unsigned char*)(img->imageData + img->widthStep*r))[c] = val;
+//}
 
 
 /**
@@ -78,10 +78,7 @@ static inline void setpix8(mv_image_t* img, int r, int c, unsigned char val)
    @param c column
    @return Returns the value of the pixel at (\a r, \a c) in \a img
    */
-static inline float pixval32f(mv_image_t* img, int r, int c)
-{
-    return ((float*)(img->imageData + img->widthStep*r))[c];
-}
+
 
 
 /**
@@ -92,10 +89,10 @@ static inline float pixval32f(mv_image_t* img, int r, int c)
    @param c column
    @param val pixel value
    */
-static inline void setpix32f(mv_image_t* img, int r, int c, float val)
-{
-    ((float*)(img->imageData + img->widthStep*r))[c] = val;
-}
+//static inline void setpix32f(mv_image_t* img, int r, int c, float val)
+//{
+//    ((float*)(img->imageData + img->widthStep*r))[c] = val;
+//}
 
 
 /**
@@ -106,10 +103,10 @@ static inline void setpix32f(mv_image_t* img, int r, int c, float val)
    @param c column
    @return Returns the value of the pixel at (\a r, \a c) in \a img
    */
-static inline double pixval64f(mv_image_t* img, int r, int c)
-{
-    return (double)(((double*)(img->imageData + img->widthStep*r))[c]);
-}
+//static inline double pixval64f(mv_image_t* img, int r, int c)
+//{
+//    return (double)(((double*)(img->imageData + img->widthStep*r))[c]);
+//}
 
 
 /**
@@ -120,10 +117,10 @@ static inline double pixval64f(mv_image_t* img, int r, int c)
    @param c column
    @param val pixel value
    */
-static inline void setpix64f(mv_image_t* img, int r, int c, double val)
-{
-    ((double*)(img->imageData + img->widthStep*r))[c] = val;
-}
+//static inline void setpix64f(mv_image_t* img, int r, int c, double val)
+//{
+//    ((double*)(img->imageData + img->widthStep*r))[c] = val;
+//}
 
 
 /**************************** Function Prototypes ****************************/
@@ -178,7 +175,7 @@ extern char* basename(const char* pathname);
    @param done if 0, this function simply increments the state of the pinwheel;
    otherwise it prints "done"
    */
-extern void progress(int done);
+//extern void progress(int done);
 
 
 /**
@@ -187,7 +184,7 @@ extern void progress(int done);
    @param stream the stream from which to erase characters
    @param n the number of characters to erase
    */
-extern void erase_from_stream(FILE* stream, int n);
+//extern void erase_from_stream(FILE* stream, int n);
 
 
 /**
@@ -221,7 +218,7 @@ double dist_sq_2D(mv_point_d_t p1, mv_point_d_t p2);
    @param w the x's line weight
    @param color the color of the x
    */
-void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color);
+//void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color);
 
 
 /**
@@ -244,7 +241,7 @@ void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color);
    @param img an image, possibly too large to display on-screen
    @param title the title of the window in which \a img is displayed
    */
-void display_big_img(mv_image_t* img, char* title);
+//void display_big_img(mv_image_t* img, char* title);
 
 
 /**
@@ -266,7 +263,7 @@ void display_big_img(mv_image_t* img, char* title);
    @param n number of images in \a imgs
    @param win_name name of window in which images are displayed
    */
-void vid_view(mv_image_t** imgs, int n, char* win_name);
+//void vid_view(mv_image_t** imgs, int n, char* win_name);
 
 
 /**
@@ -276,7 +273,7 @@ void vid_view(mv_image_t** imgs, int n, char* win_name);
 
    @return Returns 1 if the window named \a name has been closed or 0 otherwise
    */
-int win_closed(char* name);
+//int win_closed(char* name);
 
 #endif
 

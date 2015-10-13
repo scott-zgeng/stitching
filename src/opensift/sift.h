@@ -20,7 +20,7 @@
 #ifndef SIFT_H
 #define SIFT_H
 
-#include "../mv_base.h"
+#include "../img_proc.h"
 
 /******************************** Structures *********************************/
 

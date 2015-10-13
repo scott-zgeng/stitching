@@ -292,13 +292,13 @@ double dist_sq_2D(mv_point_d_t p1, mv_point_d_t p2)
   @param w the x's line weight
   @param color the color of the x
   */
-void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color)
-{
-    mv_line(img, pt, mv_point_t(pt.x + r, pt.y + r), color, w, 8, 0);
-    mv_line(img, pt, mv_point_t(pt.x - r, pt.y + r), color, w, 8, 0);
-    mv_line(img, pt, mv_point_t(pt.x + r, pt.y - r), color, w, 8, 0);
-    mv_line(img, pt, mv_point_t(pt.x - r, pt.y - r), color, w, 8, 0);
-}
+//void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color)
+//{
+//    mv_line(img, pt, mv_point_t(pt.x + r, pt.y + r), color, w, 8, 0);
+//    mv_line(img, pt, mv_point_t(pt.x - r, pt.y + r), color, w, 8, 0);
+//    mv_line(img, pt, mv_point_t(pt.x + r, pt.y - r), color, w, 8, 0);
+//    mv_line(img, pt, mv_point_t(pt.x - r, pt.y - r), color, w, 8, 0);
+//}
 
 
 
@@ -491,9 +491,9 @@ void draw_x(mv_image_t* img, mv_point_t pt, int r, int w, mv_scalar_t color)
 
   @return Returns 1 if the window named \a name has been closed or 0 otherwise
   */
-int win_closed(char* win_name)
-{
-    if (!mv_get_windows_handle(win_name))
-        return 1;
-    return 0;
-}
+//int win_closed(char* win_name)
+//{
+//    if (!mv_get_windows_handle(win_name))
+//        return 1;
+//    return 0;
+//}

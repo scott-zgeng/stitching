@@ -190,12 +190,8 @@ static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
         dbl = mv_create_image(mv_size_t(img->width * 2, img->height * 2),
             IPL_DEPTH_32F, 1);
 
-        cvResize(gray->org, dbl->org);
-        //mv_resize_cubic
-
-        //resize_cubic cubic;
-        //cubic.init()
-
+        mv_resize_cubic(gray, dbl);
+        
         mv_smooth(dbl, dbl, MV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
         mv_release_image(&gray);
         return dbl;
@@ -227,7 +223,7 @@ static mv_image_t* convert_to_gray32(mv_image_t* img)
     else
     {
         gray8 = mv_create_image(mv_get_size(img), IPL_DEPTH_8U, 1);
-        mv_cvt_bgr_gray(img, gray8);
+        mv_convert_gray(img, gray8);
     }
     mv_normalize_u8(gray8, gray32, 1.0 / 255.0);
 
@@ -290,10 +286,8 @@ static mv_image_t*** build_gauss_pyr(mv_image_t* base, int octvs,
         /* blur the current octave's last image to create the next one */
         else
         {
-            gauss_pyr[o][i] = mv_create_image(mv_get_size(gauss_pyr[o][i - 1]),
-                IPL_DEPTH_32F, 1);
-            mv_smooth(gauss_pyr[o][i - 1], gauss_pyr[o][i],
-                MV_GAUSSIAN, 0, 0, sig[i], sig[i]);
+            gauss_pyr[o][i] = mv_create_image(mv_get_size(gauss_pyr[o][i - 1]), IPL_DEPTH_32F, 1);
+            mv_smooth(gauss_pyr[o][i - 1], gauss_pyr[o][i], MV_GAUSSIAN, 0, 0, sig[i], sig[i]);
         }
     }
 
