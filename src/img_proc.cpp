@@ -126,345 +126,12 @@ void mv_release_image(mv_image_t** image)
     *image = NULL;   
 }
 
-void mv_set_image_roi(mv_image_t* image, mv_rect_t rect)
-{
-
-}
-
-
-void mv_reset_image_roi(mv_image_t* image)
-{
-
-}
-
-
-void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst)
-{
-
-}
-
-// dst(mask) = src1(mask) + src2(mask) 
-void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask)
-{
-
-}
-
-/** dst(mask) = src1(mask) - src2(mask) */
-void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask)
-{
-
-}
-
-
-//
-//
-//template<typename T, typename WT, typename AT>
-//struct HResizeCubic
-//{
-//    typedef T value_type;
-//    typedef WT buf_type;
-//    typedef AT alpha_type;
-//
-//    void operator()(const T** src, WT** dst, int count,
-//        const int* xofs, const AT* alpha,
-//        int swidth, int dwidth, int cn, int xmin, int xmax) const
-//    {
-//        for (int k = 0; k < count; k++)
-//        {
-//            const T *S = src[k];
-//            WT *D = dst[k];
-//            int dx = 0, limit = xmin;
-//            for (;;)
-//            {
-//                for (; dx < limit; dx++, alpha += 4)
-//                {
-//                    int j, sx = xofs[dx] - cn;
-//                    WT v = 0;
-//                    for (j = 0; j < 4; j++)
-//                    {
-//                        int sxj = sx + j*cn;
-//                        if ((unsigned)sxj >= (unsigned)swidth)
-//                        {
-//                            while (sxj < 0)
-//                                sxj += cn;
-//                            while (sxj >= swidth)
-//                                sxj -= cn;
-//                        }
-//                        v += S[sxj] * alpha[j];
-//                    }
-//                    D[dx] = v;
-//                }
-//                if (limit == dwidth)
-//                    break;
-//                for (; dx < xmax; dx++, alpha += 4)
-//                {
-//                    int sx = xofs[dx];
-//                    D[dx] = S[sx - cn] * alpha[0] + S[sx] * alpha[1] +
-//                        S[sx + cn] * alpha[2] + S[sx + cn * 2] * alpha[3];
-//                }
-//                limit = dwidth;
-//            }
-//            alpha -= dwidth * 4;
-//        }
-//    }
-//};
-//
-//
-//template<typename ST, typename DT, int bits> struct FixedPtCast
-//{
-//    typedef ST type1;
-//    typedef DT rtype;
-//    enum { SHIFT = bits, DELTA = 1 << (bits - 1) };
-//
-//    DT operator()(ST val) const { return saturate_cast<DT>((val + DELTA) >> SHIFT); }
-//};
-//
-//
-//
-//template<typename T, typename WT, typename AT, class CastOp>
-//struct VResizeCubic
-//{
-//    typedef T value_type;
-//    typedef WT buf_type;
-//    typedef AT alpha_type;
-//
-//    void operator()(const WT** src, T* dst, const AT* beta, int width) const
-//    {
-//        WT b0 = beta[0], b1 = beta[1], b2 = beta[2], b3 = beta[3];
-//        const WT *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-//        CastOp castOp;
-//
-//        for (int x = 0; x < width; x++)
-//            dst[x] = castOp(S0[x] * b0 + S1[x] * b1 + S2[x] * b2 + S3[x] * b3);
-//    }
-//};
-//
-
-
-//
-//
-//mv_result resize_cubic::init(mv_size_t ssize, mv_size_t dsize) {
-//
-//    m_ssize = ssize;
-//    m_dsize = dsize;
-//
-//    double inv_scale_x = (double)dsize.width / ssize.width;
-//    double inv_scale_y = (double)dsize.height / ssize.height;
-//
-//    int cn = 1;  //channel number
-//
-//    m_scale_x = 1.0 / inv_scale_x;
-//    m_scale_y = 1.0 / inv_scale_y;
-//
-//    m_xmin = 0;
-//    m_xmax = dsize.width;        
-//
-//    m_ksize = 4;
-//    int ksize2 = m_ksize / 2;
-//
-//    m_xofs = (int*)mv_malloc(dsize.width*sizeof(int));
-//    m_yofs = (int*)mv_malloc(dsize.height*sizeof(int));
-//    m_alpha = (short*)mv_malloc(dsize.width*m_ksize*sizeof(short));
-//    m_beta = (short*)mv_malloc(dsize.height*m_ksize*sizeof(short));
-//        
-//
-//    int k, sx, sy, dx, dy;
-//    float fx, fy;
-//    for (int dx = 0; dx < dsize.width; dx++) {
-//        fx = (float)((dx + 0.5)*m_scale_x - 0.5);
-//        sx = mv_floor(fx);
-//        fx -= sx;
-//
-//        if (sx < ksize2 - 1)
-//            m_xmin = dx + 1;
-//
-//        if (sx + ksize2 >= ssize.width)
-//            m_xmax = MAX(m_xmax, dx);
-//
-//        for (k = 0, sx *= cn; k < cn; k++)
-//            m_xofs[dx*cn + k] = sx + k;
-//
-//        interpolate_cubic(fx, m_cbuf);
-//
-//        for (k = 0; k < m_ksize; k++)
-//            m_alpha[dx*cn*m_ksize + k] = saturate_cast<short>(m_cbuf[k] * INTER_RESIZE_COEF_SCALE);
-//
-//        for (; k < cn*m_ksize; k++)
-//            m_alpha[dx*cn*m_ksize + k] = m_alpha[dx*cn*m_ksize + k - m_ksize];
-//
-//    }
-//
-//    for (dy = 0; dy < dsize.height; dy++) {
-//        fy = (float)((dy + 0.5)*m_scale_y - 0.5);
-//        sy = mv_floor(fy);
-//        fy -= sy;
-//
-//        m_yofs[dy] = sy;
-//
-//        interpolate_cubic(fy, m_cbuf);
-//
-//        for (k = 0; k < m_ksize; k++)
-//            m_beta[dy*m_ksize + k] = saturate_cast<short>(m_cbuf[k] * INTER_RESIZE_COEF_SCALE);
-//    }
-//
-//    return MV_SUCCEEDED;
-//}
-
-//static inline int clip(int x, int a, int b)
-//{
-//    return x >= a ? (x < b ? x : b - 1) : a;
-//}
-//
-//
-//static inline size_t align_size(size_t sz, int n)
-//{    
-//    return (sz + n - 1) & -n;
-//}
-//
-//
-
-//void resize_cubic::operator()(const mv_image_t* src, mv_image_t* dst) 
-//{
-//    HResizeCubic<uchar, int, short> hresize;
-//    VResizeCubic<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS * 2> > vresize;
-//
-//    int cn = src->nChannels;
-//
-//    
-//    int bufstep = (int)align_size(m_dsize.width, 16);
-//    AutoBuffer<int> _buffer(bufstep*m_ksize);
-//
-//    const uchar* srows[MAX_ESIZE] = { 0 };
-//    int* rows[MAX_ESIZE] = { 0 };
-//    int prev_sy[MAX_ESIZE];
-//
-//    for (int k = 0; k < m_ksize; k++)
-//    {
-//        prev_sy[k] = -1;
-//        rows[k] = (int*)_buffer + bufstep*k;
-//    }
-//
-//    int ksize2 = m_ksize / 2;
-//    const short* beta = m_beta;
-//
-//
-//    for (int dy = 0; dy < m_dsize.height; dy++, beta += m_ksize)
-//    {
-//        int sy0 = m_yofs[dy], k0 = m_ksize, k1 = 0;
-//
-//        for (int k = 0; k < m_ksize; k++)
-//        {
-//            int sy = clip(sy0 - ksize2 + 1 + k, 0, m_ssize.height);
-//            for (int k1 = MAX(k1, k); k1 < m_ksize; k1++)
-//            {
-//                if (sy == prev_sy[k1]) // if the sy-th row has been computed already, reuse it.
-//                {
-//                    if (k1 > k)
-//                        memcpy(rows[k], rows[k1], bufstep*sizeof(rows[0][0]));
-//                    break;
-//                }
-//            }
-//            if (k1 == m_ksize)
-//                k0 = MIN(k0, k); // remember the first row that needs to be computed
-//            //srows[k] = src->imageData; .template ptr<uchar>(sy);
-//            prev_sy[k] = sy;
-//        }
-//
-//        if (k0 < m_ksize) {
-//            hresize((const uchar**)(srows + k0), (int**)(rows + k0), m_ksize - k0, m_xofs,
-//                m_alpha, m_ssize.width, m_dsize.width, cn, m_xmin, m_xmax);
-//        }
-//
-//        vresize((const int**)rows, (uchar*)(dst->imageData + dst->widthStep*dy), beta, m_dsize.width);
-//    }
-//
-//
-//}
-
-//
-//void dasdasd()
-//{
-//    function gaussBlur_4(scl, tcl, w, h, r) {
-//    
-//    var bxs = boxesForGauss(r, 3);
-//    
-//    boxBlur_4(scl, tcl, w, h, (bxs[0] - 1) / 2);
-//    
-//            boxBlur_4(tcl, scl, w, h, (bxs[1] - 1) / 2);
-//        
-//            boxBlur_4(scl, tcl, w, h, (bxs[2] - 1) / 2);
-//                
-//    }
-//    12.
-//        13.function boxBlur_4(scl, tcl, w, h, r) {
-//            14.
-//                15.    for (var i = 0; i<scl.length; i++) tcl[i] = scl[i];
-//            16.
-//                17.    boxBlurH_4(tcl, scl, w, h, r);
-//            18.
-//                19.    boxBlurT_4(scl, tcl, w, h, r);
-//            20.
-//                21.
-//        }
-//    22.
-//        23.function boxBlurH_4(scl, tcl, w, h, r) {
-//            24.
-//                25.    var iarr = 1 / (r + r + 1);
-//            26.
-//                27.    for (var i = 0; i<h; i++) {
-//                28.
-//                    29.        var ti = i*w, li = ti, ri = ti + r;
-//                30.
-//                    31.        var fv = scl[ti], lv = scl[ti + w - 1], val = (r + 1)*fv;
-//                32.
-//                    33.        for (var j = 0; j<r; j++) val += scl[ti + j];
-//                34.
-//                    35.        for (var j = 0; j <= r; j++) { val += scl[ri++] - fv;   tcl[ti++] = Math.round(val*iarr); }
-//                36.
-//                    37.        for (var j = r + 1; j<w - r; j++) { val += scl[ri++] - scl[li++];   tcl[ti++] = Math.round(val*iarr); }
-//                38.
-//                    39.        for (var j = w - r; j<w; j++) { val += lv - scl[li++];   tcl[ti++] = Math.round(val*iarr); }
-//                40.
-//                    41.
-//            }
-//            42.
-//                43.
-//        }
-//    44.
-//        45.function boxBlurT_4(scl, tcl, w, h, r) {
-//            46.
-//                47.    var iarr = 1 / (r + r + 1);
-//            48.
-//                49.    for (var i = 0; i<w; i++) {
-//                50.
-//                    51.        var ti = i, li = ti, ri = ti + r*w;
-//                52.
-//                    53.        var fv = scl[ti], lv = scl[ti + w*(h - 1)], val = (r + 1)*fv;
-//                54.
-//                    55.        for (var j = 0; j<r; j++) val += scl[ti + j*w];
-//                56.
-//                    57.        for (var j = 0; j <= r; j++) { val += scl[ri] - fv;  tcl[ti] = Math.round(val*iarr);  ri += w; ti += w; }
-//                58.
-//                    59.        for (var j = r + 1; j<h - r; j++) { val += scl[ri] - scl[li];  tcl[ti] = Math.round(val*iarr);  li += w; ri += w; ti += w; }
-//                60.
-//                    61.        for (var j = h - r; j<h; j++) { val += lv - scl[li];  tcl[ti] = Math.round(val*iarr);  li += w; ti += w; }
-//                62.
-//                    63.
-//            }
-//            64.
-//                65.
-//        }
-//
-//
-//}
-
-
 
 void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst)
 {
 
-    double scale_x = src->width / dst->width;
-    double scale_y = src->height / dst->height;
+    double scale_x = (double)src->width / dst->width;
+    double scale_y = (double)src->height / dst->height;
     uchar* dataDst = dst->imageData;
     int stepDst = dst->widthStep;
     uchar* dataSrc = src->imageData;
@@ -514,11 +181,9 @@ void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst)
 }
 
 void mv_resize_nn(const mv_image_t* src, mv_image_t* dst)
-{
-    //int cn = 1;  //channel number
-
-    double scale_x = src->width / dst->width;
-    double scale_y = src->height / dst->height;
+{    
+    double scale_x = (double)src->width / dst->width;
+    double scale_y = (double)src->height / dst->height;
 
     for (int y = 0; y < dst->height; ++y) {
 
@@ -528,7 +193,7 @@ void mv_resize_nn(const mv_image_t* src, mv_image_t* dst)
         for (int x = 0; x < dst->width; ++x) {
             int sx = mv_floor(x * scale_x);
             sx = MIN(sx, src->width - 1);
-            dst->imageData[y * dst->widthStep, x] = src->imageData[sy * src->widthStep + sx];
+            dst->imageData[y * dst->widthStep + x] = src->imageData[sy * src->widthStep + sx];
         }
     }
 }
@@ -551,17 +216,6 @@ void mv_normalize_u8(const mv_image_t* src, mv_image_t* dst, double scale)
         dst_data += dst->width;
     }
 }
-
-
-
-
-
-
-void mv_smooth(const mv_image_t* src, mv_image_t* dst, int smoothtype, int size1, int size2, double sigma1, double sigma2)
-{
-
-}
-
 
 
 
@@ -617,3 +271,152 @@ void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix
 void mv_set_zero(mv_image_t* arr)
 {
 }
+
+
+
+
+void mv_set_image_roi(mv_image_t* image, mv_rect_t rect)
+{
+
+}
+
+
+void mv_reset_image_roi(mv_image_t* image)
+{
+
+}
+
+
+void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst)
+{
+
+}
+
+// dst(mask) = src1(mask) + src2(mask) 
+void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask)
+{
+
+}
+
+/** dst(mask) = src1(mask) - src2(mask) */
+void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask)
+{
+
+}
+
+
+
+
+
+
+// box blur 
+// refencence£º http://blog.ivank.net/fastest-gaussian-blur.html
+static void box_blur_horizontal(mv_byte* src, mv_byte* dst, int width, int height, double sigma)
+{
+    double iarr = 1 / (sigma + sigma + 1);
+
+    for (int i = 0; i<height; i++) {
+        int ti = i*width;
+        int li = ti;
+        int ri = ti + sigma;
+        double fv = src[ti];
+        double lv = src[ti + width - 1];
+        double val = (sigma + 1)*fv;
+
+        for (int j = 0; j < sigma; j++) {
+            val += src[ti + j];
+        }
+
+        for (int j = 0; j <= sigma; j++) { 
+            val += src[ri++] - fv;   
+            dst[ti++] = mv_round(val*iarr);
+        }
+
+        for (int j = sigma + 1; j<width - sigma; j++) {
+            val += src[ri++] - src[li++];   
+            dst[ti++] = mv_round(val*iarr);
+        }
+
+        for (int j = width - sigma; j<width; j++) { 
+            val += lv - src[li++];   
+            dst[ti++] = mv_round(val*iarr);
+        }
+    }
+}
+
+static void box_blur_total(mv_byte* src, mv_byte* dst, int width, int height, double sigma)
+{
+    double iarr = 1 / (sigma + sigma + 1);
+
+    for (int i = 0; i < width; i++) {
+        int ti = i;
+        int li = ti;
+        int ri = ti + sigma*width;
+        double fv = src[ti];
+        double lv = src[ti + width*(height - 1)];
+        double val = (sigma + 1)*fv;
+
+        for (int j = 0; j < sigma; j++) {
+            val += src[ti + j*width];
+        }
+
+        for (int j = 0; j <= sigma; j++) { 
+            val += src[ri] - fv;  
+            dst[ti] = mv_round(val*iarr);  
+            ri += width; ti += width; 
+        }
+
+        for (int j = sigma + 1; j < height - sigma; j++) { 
+            val += src[ri] - src[li];  
+            dst[ti] = mv_round(val*iarr);
+            li += width; ri += width; ti += width; 
+        }
+
+        for (int j = height - sigma; j < height; j++) {
+            val += lv - src[li];  
+            dst[ti] = mv_round(val*iarr);
+            li += width; ti += width; 
+        }
+    }
+}
+
+
+static inline void box_blur_impl(mv_byte* src, mv_byte* dst, int width, int height, double sigma)
+{
+    int size = width * height;
+    for (int i = 0; i<size; i++)
+        dst[i] = src[i];
+
+    box_blur_horizontal(dst, src, width, height, sigma);
+    box_blur_total(src, dst, width, height, sigma);
+}
+
+
+void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma)
+{
+    static const int PASS_NUM = 3;
+    double kernel[PASS_NUM];
+
+    double ideal_width  = sqrt((12 * sigma*sigma / PASS_NUM) + 1);  // Ideal averaging filter width 
+    int wl = mv_floor(ideal_width);  if (wl % 2 == 0) wl--;
+    int wu = wl + 2;
+
+    double mIdeal = (12 * sigma*sigma - PASS_NUM*wl*wl - 4 * PASS_NUM*wl - 3*PASS_NUM) / (-4*wl - 4);
+    int m = mv_round(mIdeal);
+    //double sigma_actual = sqrt( (m*wl*wl + (n-m)*wu*wu - n)/12 );
+
+    for (int i = 0; i < PASS_NUM; i++) {
+        kernel[i] = ((i < m ? wl : wu) - 1) / 2.0;        
+    }
+
+    int width = src->width;
+    int height = src->height;
+
+    mv_byte* p1 = src->imageData;
+    mv_byte* p2 = dst->imageData;
+    
+    box_blur_impl(p1, p2, width, height, kernel[0]);
+    box_blur_impl(p2, p1, width, height, kernel[1]);
+    box_blur_impl(p1, p2, width, height, kernel[2]);
+}
+

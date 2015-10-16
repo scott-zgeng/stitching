@@ -59,31 +59,32 @@ static inline float pixval32f(mv_image_t* img, int r, int c)
 
 
 // 已经实现的函数
-void mv_convert_gray(const mv_image_t* src, mv_image_t* dst);   // OK
-mv_image_t* mv_clone_image(const mv_image_t* image);  // OK
+void mv_convert_gray(const mv_image_t* src, mv_image_t* dst);  
+mv_image_t* mv_clone_image(const mv_image_t* image); 
 mv_image_t* mv_create_image(mv_size_t size, int depth, int channels);
 void mv_release_image(mv_image_t** image);
-void mv_normalize_u8(const mv_image_t* src, mv_image_t* dst, double scale); // [OK]
+void mv_normalize_u8(const mv_image_t* src, mv_image_t* dst, double scale); 
+void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst);
+void mv_resize_nn(const mv_image_t* src, mv_image_t* dst);
 
 
 static inline mv_size_t mv_get_size(const mv_image_t* image) {
     return mv_size_t(image->width, image->height);
 }
 
+void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma);
+void mv_gaussian_blur(const mv_image_t* src, mv_image_t* dst, double sigma);  // 未实现，目前用 box blur代替
+
+
 
 // todo(scott.zgeng): 未整理
 void mv_set_zero(mv_image_t* arr);
-
 void mv_set_image_roi(mv_image_t* image, mv_rect_t rect);
 void mv_reset_image_roi(mv_image_t* image);
 void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst);
 void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
 void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
 
-void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst);
-void mv_resize_nn(const mv_image_t* src, mv_image_t* dst);
-
-void mv_smooth(const mv_image_t* src, mv_image_t* dst, int smoothtype, int size1, int size2, double sigma1, double sigma2);
 void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix_t* map_matrix, int flags, mv_scalar_t fillval);
 
 

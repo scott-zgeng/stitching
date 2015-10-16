@@ -395,6 +395,14 @@ void show_image(mv_image_t* img)
 }
 
 
+void show_cv_image(IplImage* img)
+{
+    const char* IMG_TEST_2 = "test_windows_2";    
+    cvShowImage(IMG_TEST_2, img);
+    cvWaitKey(0);    
+}
+
+
 int test_image_proc() {
 
     const char* imgfile1 = "g1.jpg";
@@ -407,18 +415,32 @@ int test_image_proc() {
     mv_convert_gray(img, gray8);   
     show_image(gray8);
     
-    mv_image_t* gray8_clone = mv_clone_image(gray8);
-    show_image(gray8_clone);
+    //mv_image_t* gray8_clone = mv_clone_image(gray8);
+    //show_image(gray8_clone);
 
-    mv_image_t* gray32 = mv_create_image(mv_get_size(img), IPL_DEPTH_32F, 1);
-    show_image(gray32);
+    //mv_image_t* gray32 = mv_create_image(mv_get_size(img), IPL_DEPTH_32F, 1);
+    //show_image(gray32);
 
-    mv_normalize_u8(gray8, gray32, 1.0 / 255.0);
-    show_image(gray32);
+    //mv_normalize_u8(gray8, gray32, 1.0 / 255.0);
+    //show_image(gray32);
 
-    mv_image_t* resize = mv_create_image(mv_size_t(img->width * 1.2, img->height * 1.2), IPL_DEPTH_8U, 1);
-    mv_resize_nn(gray8_clone, resize);
-    show_image(resize);
+    //mv_image_t* resize1 = mv_create_image(mv_size_t(img->width * 1.2, img->height * 1.2), IPL_DEPTH_8U, 1);
+    //mv_resize_nn(gray8_clone, resize1);
+    //show_image(resize1);
+
+    //mv_image_t* resize2 = mv_create_image(mv_size_t(img->width * 1.3, img->height * 1.3), IPL_DEPTH_8U, 1);
+    //mv_resize_cubic(gray8_clone, resize2);
+    //show_image(resize2);
+
+    double sigma = 20;
+    mv_image_t* blur = mv_create_image(mv_size_t(img->width, img->height), IPL_DEPTH_8U, 1);
+    mv_box_blur(gray8, blur, sigma);
+    show_image(blur);
+
+    IplImage* blur2 = cvCreateImage(cvSize(img_org->width, img_org->height), IPL_DEPTH_8U, 3);
+    cvSmooth(img_org, blur2, CV_GAUSSIAN, 0, 0, sigma, sigma);    
+
+    show_cv_image(blur2);
 
     return 0;
 }

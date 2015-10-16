@@ -192,14 +192,14 @@ static mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma)
 
         mv_resize_cubic(gray, dbl);
         
-        mv_smooth(dbl, dbl, MV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
+        mv_box_blur(dbl, dbl, sig_diff);
         mv_release_image(&gray);
         return dbl;
     }
     else
     {
         sig_diff = sqrt(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA);
-        mv_smooth(gray, gray, MV_GAUSSIAN, 0, 0, sig_diff, sig_diff);
+        mv_box_blur(gray, gray, sig_diff);
         return gray;
     }
 }
@@ -287,7 +287,7 @@ static mv_image_t*** build_gauss_pyr(mv_image_t* base, int octvs,
         else
         {
             gauss_pyr[o][i] = mv_create_image(mv_get_size(gauss_pyr[o][i - 1]), IPL_DEPTH_32F, 1);
-            mv_smooth(gauss_pyr[o][i - 1], gauss_pyr[o][i], MV_GAUSSIAN, 0, 0, sig[i], sig[i]);
+            mv_box_blur(gauss_pyr[o][i - 1], gauss_pyr[o][i], sig[i]);
         }
     }
 
