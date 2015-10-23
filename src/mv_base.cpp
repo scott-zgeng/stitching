@@ -75,12 +75,6 @@ void mv_svd(mv_matrix_t* A, mv_matrix_t* W, mv_matrix_t* U, mv_matrix_t* V, int 
 
 
 
-mv_matrix_t* mv_get_row(const mv_matrix_t* arr, mv_matrix_t* submat, int row)
-{
-    return NULL;
-}
-
-
 void mv_convert(const mv_matrix_t* src, mv_matrix_t* dst)
 {
 

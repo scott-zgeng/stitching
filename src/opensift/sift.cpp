@@ -340,7 +340,7 @@ static mv_image_t*** build_dog_pyr(mv_image_t*** gauss_pyr, int octvs, int intvl
     {
         dog_pyr[o][i] = mv_create_image(mv_get_size(gauss_pyr[o][i]),
             IPL_DEPTH_32F, 1);
-        mv_sub(gauss_pyr[o][i + 1], gauss_pyr[o][i], dog_pyr[o][i], NULL);
+        mv_sub(gauss_pyr[o][i + 1], gauss_pyr[o][i], dog_pyr[o][i]);
     }
 
     return dog_pyr;

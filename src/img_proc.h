@@ -67,26 +67,20 @@ void mv_normalize_u8(const mv_image_t* src, mv_image_t* dst, double scale);
 void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst);
 void mv_resize_nn(const mv_image_t* src, mv_image_t* dst);
 
-
 static inline mv_size_t mv_get_size(const mv_image_t* image) {
     return mv_size_t(image->width, image->height);
 }
 
 void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma);
-void mv_gaussian_blur(const mv_image_t* src, mv_image_t* dst, double sigma);  // 未实现，目前用 box blur代替
+//void mv_gaussian_blur(const mv_image_t* src, mv_image_t* dst, double sigma);  // 未实现，目前用 box blur代替
+void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst);
 
 
-
-// todo(scott.zgeng): 未整理
-void mv_set_zero(mv_image_t* arr);
+// todo(scott.zgeng): 未整理， 都是拼接用的函数
 void mv_set_image_roi(mv_image_t* image, mv_rect_t rect);
 void mv_reset_image_roi(mv_image_t* image);
 void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst);
-void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
-void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask);
-
 void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix_t* map_matrix, int flags, mv_scalar_t fillval);
-
 
 
 

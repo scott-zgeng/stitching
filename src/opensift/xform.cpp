@@ -91,8 +91,7 @@ mv_matrix_t* ransac_xform(struct feature* features, int n, int mtype,
     nm = get_matched_features(features, n, mtype, &matched);
     if (nm < m)
     {
-        fprintf(stderr, "Warning: not enough matches to compute xform, %s" \
-            " line %d\n", __FILE__, __LINE__);
+        fprintf(stderr, "Warning: not enough matches to compute xform, %s line %d\n", __FILE__, __LINE__);
         goto end;
     }
 
@@ -223,6 +222,7 @@ end:
 //    mv_release_matrix(&VT);
 //    return H;
 //}
+
 
 
 
@@ -374,8 +374,7 @@ static inline struct feature* get_match(struct feature* feat, int mtype)
 
   @return Returns the number of features output in matched.
   */
-static int get_matched_features(struct feature* features, int n, int mtype,
-struct feature*** matched)
+static int get_matched_features(struct feature* features, int n, int mtype, struct feature*** matched)
 {
     struct feature** _matched;
     struct ransac_data* rdata;

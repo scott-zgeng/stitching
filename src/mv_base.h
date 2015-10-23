@@ -265,15 +265,18 @@ struct mv_size_t
 {
     int width;
     int height;
+
     mv_size_t() {
         width = 0;
         height = 0;
     }
+
     mv_size_t(int w, int h) {
         width = w;
         height = h;
     }
 };
+
 
 struct mv_matrix_t
 {
@@ -299,11 +302,13 @@ struct mv_matrix_t
 
     mv_matrix_t() {
         type = 0;
-        type = 0;
+        step = 0;
+
         cols = 0;
         rows = 0;
-        step = 0;
+        
         data.ptr = NULL;
+
         refcount = NULL;
         hdr_refcount = 0;
     }
@@ -317,7 +322,7 @@ struct mv_matrix_t
         step = c * MV_ELEM_SIZE(t);
         data.ptr = (unsigned char*)ptr;
         refcount = NULL;
-        hdr_refcount = 0;        
+        hdr_refcount = 0; 
     }
 };
 
@@ -558,27 +563,27 @@ template<> inline mv_uint32 saturate_cast<mv_uint32>(mv_double v)   { return mv_
 
 
 
-
-
-
 // 13  先不移植，等图像部分移植完成后再考虑
 mv_matrix_t* mv_create_matrix(int rows, int cols, int type);
-double mv_invert(mv_matrix_t* src, mv_matrix_t* dst, int method);  // OK
 void mv_release_matrix(mv_matrix_t** mat);
-mv_matrix_t* mv_clone_matrix(const mv_matrix_t* mat);  
+mv_matrix_t* mv_clone_matrix(const mv_matrix_t* mat);
 mv_matrix_t* mv_init_matrix_header(mv_matrix_t* mat, int rows, int cols, int type, void* data, int step);
+void mv_matrix_zero(mv_matrix_t* mat);
+
+double mv_invert(mv_matrix_t* src, mv_matrix_t* dst, int method);  
+void mv_matrix_mul(const mv_matrix_t* src1, const mv_matrix_t* src2, mv_matrix_t* dst);
 void mv_matrix_mul_add_ex(const mv_matrix_t* src1, const mv_matrix_t* src2, double alpha,
     const mv_matrix_t* src3, double beta, mv_matrix_t* dst, int tABC);
-#define mv_matrix_mul(src1, src2, dst)  mv_matrix_mul_add_ex((src1), (src2), 1.0, NULL, 1.0, (dst), 0)
-//void mv_eigen_val_vector(mv_matrix_t* mat, mv_matrix_t* evects, mv_matrix_t* evals, double eps, int lowindex, int highindex);  //OK
-void mv_matrix_zero(mv_matrix_t* mat);
-//void mv_svd(mv_matrix_t* A, mv_matrix_t* W, mv_matrix_t* U, mv_matrix_t* V, int flags);  //OK
-mv_matrix_t* mv_get_row(const mv_matrix_t* arr, mv_matrix_t* submat, int row);
-void mv_convert(const mv_matrix_t* src, mv_matrix_t* dst);     // COPY?
-//void mv_copy(const mv_matrix_t* src, mv_matrix_t* dst, const mv_matrix_t* mask);
+
 int mv_solve(const mv_matrix_t* src1, const mv_matrix_t* src2, mv_matrix_t* dst, int method);   // SVD 
 
 
+void mv_convert(const mv_matrix_t* src, mv_matrix_t* dst);     // COPY?
+
+
+//void mv_copy(const mv_matrix_t* src, mv_matrix_t* dst, const mv_matrix_t* mask);
+//void mv_eigen_val_vector(mv_matrix_t* mat, mv_matrix_t* evects, mv_matrix_t* evals, double eps, int lowindex, int highindex);  //OK
+//void mv_svd(mv_matrix_t* A, mv_matrix_t* W, mv_matrix_t* U, mv_matrix_t* V, int flags);  //OK
 
 
 

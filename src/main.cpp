@@ -403,6 +403,20 @@ void show_cv_image(IplImage* img)
 }
 
 
+void compare_image(mv_image_t* img1, IplImage* img2)
+{
+    int size = img1->width * img1->height;
+    mv_byte* p1 = img1->imageData;
+    mv_byte* p2 = (mv_byte*)img2->imageData;
+
+    for (int i = 0; i < size; i++) {
+        if (p1[i] != p2[i]) {
+            printf("i = %d, p1 = %d, p2 = %d\n", i, p1[i], p2[i]);
+            cvWaitKey(0);
+        }
+    }
+}
+
 int test_image_proc() {
 
     const char* imgfile1 = "g1.jpg";
@@ -432,23 +446,74 @@ int test_image_proc() {
     //mv_resize_cubic(gray8_clone, resize2);
     //show_image(resize2);
 
-    double sigma = 20;
+    double sigma = 10;
     mv_image_t* blur = mv_create_image(mv_size_t(img->width, img->height), IPL_DEPTH_8U, 1);
     mv_box_blur(gray8, blur, sigma);
     show_image(blur);
 
-    IplImage* blur2 = cvCreateImage(cvSize(img_org->width, img_org->height), IPL_DEPTH_8U, 3);
-    cvSmooth(img_org, blur2, CV_GAUSSIAN, 0, 0, sigma, sigma);    
+    IplImage* org_gray = cvCreateImage(cvSize(img_org->width, img_org->height), IPL_DEPTH_8U, 1);
+    cvCvtColor(img_org, org_gray, CV_BGR2GRAY);
+    show_cv_image(org_gray);
 
+    IplImage* blur2 = cvCreateImage(cvSize(img_org->width, img_org->height), IPL_DEPTH_8U, 1);    
+    cvSmooth(org_gray, blur2, CV_GAUSSIAN, 0, 0, sigma, sigma);
     show_cv_image(blur2);
+
+    
+    
+
+    mv_image_t* blur_sub = mv_create_image(mv_get_size(img), IPL_DEPTH_8U, 1);    
+    mv_sub(blur, gray8, blur_sub);
+    show_image(blur_sub);
+
+    IplImage* blur2_sub = cvCreateImage(cvSize(img_org->width, img_org->height), IPL_DEPTH_8U, 1);
+    cvSub(blur2, org_gray, blur2_sub, NULL);
+    show_cv_image(blur2_sub);
+
+
+    //compare_image(blur_sub, blur2_sub);
 
     return 0;
 }
 
 
+extern "C" {
+#include "meschach/matrix.h"
+#include "meschach/matrix2.h"
+}
+
+void test_matrix()
+{
+    MAT* new_m = m_get(2, 2);
+    
+    m_set_val(new_m, 0, 0, 1);
+    m_set_val(new_m, 0, 1, 2);
+    m_set_val(new_m, 1, 0, 3);
+    m_set_val(new_m, 1, 1, 4);
+
+    MAT* result = m_get(2, 2);
+    m_inverse(new_m, result);
+
+    VEC* out_v = v_get(2);
+    svd(new_m, result, NULL, out_v);
+
+    m_free(new_m);
+
+
+    //m_add()	        Add matrices
+    //m_mlt()	        Multiplies matrices
+    //m_sub()		    Subtract matrices
+    //mv_mlt()	        Computes  Ax
+    //mv_mltadd()	    Computes  y <-Ax + y
+    //m_zero()	        Zero a matrix
+
+}
+
+
 int main(int argc, char** argv)
 {
-    test_image_proc();
+    //test_image_proc();
+    test_matrix();
     return 0;
 }
 

@@ -234,22 +234,25 @@ public:
         int b = 0, g = 0, r = (1 << (yuv_shift - 1));
         int db = coeffs[blueIdx ^ 2], dg = coeffs[1], dr = coeffs[blueIdx];
 
-        for (int i = 0; i < 256; i++, b += db, g += dg, r += dr)
-        {
-            tab[i] = b;
-            tab[i + 256] = g;
-            tab[i + 512] = r;
+        for (int i = 0; i < 256; i++, b += db, g += dg, r += dr) {
+            blue_tab[i] = b;
+            green_tab[i] = g;
+            red_tab[i] = r;
         }
     }
     void operator ()(const mv_byte* src, mv_byte* dst, int n) const
     {
         int scn = srccn;
-        const int* _tab = tab;
+        
         for (int i = 0; i < n; i++, src += scn)
-            dst[i] = (mv_byte)((_tab[src[0]] + _tab[src[1] + 256] + _tab[src[2] + 512]) >> yuv_shift);
+            dst[i] = (mv_byte)((blue_tab[src[0]] + green_tab[src[1]] + red_tab[src[2]]) >> yuv_shift);
+
+            
     }
     int srccn;
-    int tab[256 * 3];
+    int blue_tab[256];
+    int green_tab[256];
+    int red_tab[256];
 };
 
 
@@ -264,12 +267,6 @@ void mv_convert_gray(const mv_image_t* src, mv_image_t* dst)
 void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix_t* map_matrix, int flags, mv_scalar_t fillval)
 {
 
-}
-
-
-
-void mv_set_zero(mv_image_t* arr)
-{
 }
 
 
@@ -292,20 +289,23 @@ void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src
 
 }
 
-// dst(mask) = src1(mask) + src2(mask) 
-void mv_add(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask)
-{
-
-}
 
 /** dst(mask) = src1(mask) - src2(mask) */
-void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst, const mv_image_t* mask)
-{
+void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst)
+{    
+    assert(src1->width == src2->width && src1->height == src2->height);
+    assert(src1->width == dst->width && src1->height == dst->height);
 
+    mv_byte* p1 = src1->imageData;
+    mv_byte* p2 = src2->imageData;
+    mv_byte* result = dst->imageData;
+
+    int size = src1->height * src1->width;
+    
+    for (int i = 0; i < size; i++) {
+        result[i] = saturate_cast<mv_byte>(p1[i] - p2[i]);
+    }
 }
-
-
-
 
 
 
@@ -391,7 +391,7 @@ static inline void box_blur_impl(mv_byte* src, mv_byte* dst, int width, int heig
     box_blur_total(src, dst, width, height, sigma);
 }
 
-
+// todo(scott.zgeng): 缓冲后续最好是在外部申请
 void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma)
 {
     static const int PASS_NUM = 3;
@@ -412,11 +412,14 @@ void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma)
     int width = src->width;
     int height = src->height;
 
-    mv_byte* p1 = src->imageData;
+    mv_byte* p1 = (mv_byte* )mv_malloc(width*height);
+    memcpy(p1, src->imageData, width*height);
     mv_byte* p2 = dst->imageData;
-    
+
     box_blur_impl(p1, p2, width, height, kernel[0]);
     box_blur_impl(p2, p1, width, height, kernel[1]);
     box_blur_impl(p1, p2, width, height, kernel[2]);
+
+    mv_free(p1);
 }
 
