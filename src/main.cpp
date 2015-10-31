@@ -52,12 +52,12 @@
 
 mv_point_t leftTop, leftBottom, rightTop, rightBottom;
 
-void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2);
+void CalcFourCorner(mv_mat_handle H, mv_image_t* img2);
 
 
 
 
-int image_stitching(int argc, char** argv)
+int image_stitching()
 {
     WRITE_INFO_LOG("enter main function");
 
@@ -75,17 +75,26 @@ int image_stitching(int argc, char** argv)
     const char* imgfile1 = "g1.jpg";
     const char* imgfile2 = "g2.jpg";
 
+    IplImage* org1 = cvLoadImage(imgfile1);
+    if (!org1) {
+        WRITE_ERROR_LOG("unable to load image from %s", imgfile1);
+        return 1;
+    }
+
+    IplImage* org2 = cvLoadImage(imgfile2);
+    if (!org2) {
+        WRITE_ERROR_LOG("unable to load image from %s", imgfile2);
+        return 1;
+    }
 
 
-    mv_image_t* img1 = NULL;
-    //mv_image_t* img1 = mv_load_image(imgfile1, 1);
+    mv_image_t* img1 = mv_image_cv2mv(org1);
     if (!img1) {
         WRITE_ERROR_LOG("unable to load image from %s", imgfile1);
         return 1;
     }
 
-    mv_image_t* img2 = NULL;
-    //mv_image_t* img2 = mv_load_image(imgfile2, 1);
+    mv_image_t* img2 = mv_image_cv2mv(org2);    
     if (!img2) {
         WRITE_ERROR_LOG("unable to load image from %s", imgfile2);
         return 1;
@@ -140,13 +149,13 @@ int image_stitching(int argc, char** argv)
        */
 
 
-    mv_matrix_t* H;
+    mv_mat_handle H;
     mv_image_t* xformed;
     struct feature **inliers;
     int n_inliers;
 
     H = ransac_xform(feat2[0], feat2.size(), FEATURE_FWD_MATCH, lsq_homog, 4, 0.01, homog_xfer_err, 3.0, &inliers, &n_inliers);
-    mv_image_t *stacked_ransac;
+    //mv_image_t *stacked_ransac;
 
     //若能成功计算出变换矩阵，即两幅图中有共同区域
     if (H)
@@ -205,16 +214,15 @@ int image_stitching(int argc, char** argv)
 
         //若pt2.x > pt1.x的点的个数大于内点个数的80%，则认定img1中是右图
         if (invertNum > n_inliers * 0.8)
-        {
-            
-            mv_matrix_t * H_IVT = mv_create_matrix(3, 3, MV_64FC1);//变换矩阵的逆矩阵
+        {            
+            mv_mat_handle H_IVT = mv_create_matrix(3, 3);//变换矩阵的逆矩阵
             //求H的逆阵H_IVT时，若成功求出，返回非零值
-            if (mv_invert(H, H_IVT, MV_LU))
+            if (mv_invert(H, H_IVT))
             {
                 
-                mv_release_matrix(&H);//释放变换矩阵H，因为用不到了
+                mv_release_matrix(H);//释放变换矩阵H，因为用不到了
                 H = mv_clone_matrix(H_IVT);//将H的逆阵H_IVT中的数据拷贝到H中
-                mv_release_matrix(&H_IVT);//释放逆阵H_IVT
+                mv_release_matrix(H_IVT);//释放逆阵H_IVT
                 //将img1和img2对调
                 mv_image_t * temp = img2;
                 img2 = img1;
@@ -225,7 +233,7 @@ int image_stitching(int argc, char** argv)
             }
             else//H不可逆时，返回0
             {
-                mv_release_matrix(&H_IVT);//释放逆阵H_IVT
+                mv_release_matrix(H_IVT);//释放逆阵H_IVT
                 //QMessageBox::warning(this, tr("警告"), tr("变换矩阵H不可逆"));
             }
         }        
@@ -340,14 +348,14 @@ int image_stitching(int argc, char** argv)
 
 
 //计算图2的四个角经矩阵H变换后的坐标
-void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
+void CalcFourCorner(mv_mat_handle H, mv_image_t* img2)
 {
     //计算图2的四个角经矩阵H变换后的坐标
     double v2[] = { 0, 0, 1 };//左上角
     double v1[3];//变换后的坐标值
-    mv_matrix_t V2(3, 1, MV_64FC1, v2);
-    mv_matrix_t V1(3, 1, MV_64FC1, v1);
-    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);//矩阵乘法
+    mv_mat_handle V2 = mv_create_matrix(3, 1);// , v2);
+    mv_mat_handle V1 = mv_create_matrix(3, 1);//, v1);
+    mv_matrix_mul(H, &V2, &V1);//矩阵乘法
     leftTop.x = mv_round(v1[0] / v1[2]);
     leftTop.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,leftTop,7,MV_RGB(255,0,0),2);
@@ -355,9 +363,9 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     //将v2中数据设为左下角坐标
     v2[0] = 0;
     v2[1] = img2->height;
-    V2 = mv_matrix_t(3, 1, MV_64FC1, v2);
-    V1 = mv_matrix_t(3, 1, MV_64FC1, v1);
-    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);
+    //V2 = mv_mat_handle(3, 1, MV_64FC1, v2);
+    //V1 = mv_mat_handle(3, 1, MV_64FC1, v1);
+    mv_matrix_mul(H, &V2, &V1);
     leftBottom.x = mv_round(v1[0] / v1[2]);
     leftBottom.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,leftBottom,7,MV_RGB(255,0,0),2);
@@ -365,9 +373,9 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     //将v2中数据设为右上角坐标
     v2[0] = img2->width;
     v2[1] = 0;
-    V2 = mv_matrix_t(3, 1, MV_64FC1, v2);
-    V1 = mv_matrix_t(3, 1, MV_64FC1, v1);
-    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);
+    //V2 = mv_mat_handle(3, 1, MV_64FC1, v2);
+    //V1 = mv_mat_handle(3, 1, MV_64FC1, v1);
+    mv_matrix_mul(H, &V2, &V1);
     rightTop.x = mv_round(v1[0] / v1[2]);
     rightTop.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,rightTop,7,MV_RGB(255,0,0),2);
@@ -375,9 +383,9 @@ void CalcFourCorner(mv_matrix_t * H, mv_image_t* img2)
     //将v2中数据设为右下角坐标
     v2[0] = img2->width;
     v2[1] = img2->height;
-    V2 = mv_matrix_t(3, 1, MV_64FC1, v2);
-    V1 = mv_matrix_t(3, 1, MV_64FC1, v1);
-    mv_matrix_mul_add_ex(H, &V2, 1, 0, 1, &V1, 0);
+    //V2 = mv_mat_handle(3, 1, MV_64FC1, v2);
+    //V1 = mv_mat_handle(3, 1, MV_64FC1, v1);
+    mv_matrix_mul(H, &V2, &V1);
     rightBottom.x = mv_round(v1[0] / v1[2]);
     rightBottom.y = mv_round(v1[1] / v1[2]);
     //cvCircle(xformed,rightBottom,7,MV_RGB(255,0,0),2);
@@ -432,23 +440,24 @@ int test_image_proc() {
     //mv_image_t* gray8_clone = mv_clone_image(gray8);
     //show_image(gray8_clone);
 
-    //mv_image_t* gray32 = mv_create_image(mv_get_size(img), IPL_DEPTH_32F, 1);
+    
     //show_image(gray32);
 
-    //mv_normalize_u8(gray8, gray32, 1.0 / 255.0);
+    mv_image_t* gray32 = mv_create_image(mv_get_size(img), IPL_DEPTH_32F, 1);
+    mv_normalize_u8(gray8, gray32, 1.0 / 255.0);
     //show_image(gray32);
 
     //mv_image_t* resize1 = mv_create_image(mv_size_t(img->width * 1.2, img->height * 1.2), IPL_DEPTH_8U, 1);
     //mv_resize_nn(gray8_clone, resize1);
     //show_image(resize1);
 
-    //mv_image_t* resize2 = mv_create_image(mv_size_t(img->width * 1.3, img->height * 1.3), IPL_DEPTH_8U, 1);
-    //mv_resize_cubic(gray8_clone, resize2);
-    //show_image(resize2);
+    mv_image_t* resize2 = mv_create_image(mv_size_t(img->width * 1.3, img->height * 1.3), IPL_DEPTH_32F, 1);
+    mv_resize_cubic(gray32, resize2);
+    show_image(resize2);
 
     double sigma = 10;
-    mv_image_t* blur = mv_create_image(mv_size_t(img->width, img->height), IPL_DEPTH_8U, 1);
-    mv_box_blur(gray8, blur, sigma);
+    mv_image_t* blur = mv_create_image(mv_size_t(img->width, img->height), IPL_DEPTH_32F, 1);
+    mv_box_blur(gray32, blur, sigma);
     show_image(blur);
 
     IplImage* org_gray = cvCreateImage(cvSize(img_org->width, img_org->height), IPL_DEPTH_8U, 1);
@@ -458,9 +467,6 @@ int test_image_proc() {
     IplImage* blur2 = cvCreateImage(cvSize(img_org->width, img_org->height), IPL_DEPTH_8U, 1);    
     cvSmooth(org_gray, blur2, CV_GAUSSIAN, 0, 0, sigma, sigma);
     show_cv_image(blur2);
-
-    
-    
 
     mv_image_t* blur_sub = mv_create_image(mv_get_size(img), IPL_DEPTH_8U, 1);    
     mv_sub(blur, gray8, blur_sub);
@@ -477,10 +483,12 @@ int test_image_proc() {
 }
 
 
+
 extern "C" {
 #include "meschach/matrix.h"
 #include "meschach/matrix2.h"
 }
+
 
 void test_matrix()
 {
@@ -512,8 +520,10 @@ void test_matrix()
 
 int main(int argc, char** argv)
 {
+    image_stitching();
     //test_image_proc();
-    test_matrix();
+    //test_matrix();
+
     return 0;
 }
 

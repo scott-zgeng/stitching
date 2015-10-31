@@ -29,7 +29,7 @@ static inline double log_factorial(int);
 static struct feature** draw_ransac_sample(struct feature**, int, int);
 static void extract_corresp_pts(struct feature**, int, int, mv_point_d_t**,
     mv_point_d_t**);
-static int find_consensus(struct feature**, int, int, mv_matrix_t*, ransac_err_fn,
+static int find_consensus(struct feature**, int, int, mv_mat_handle, ransac_err_fn,
     double, struct feature***);
 static inline void release_mem(mv_point_d_t*, mv_point_d_t*,
 struct feature**);
@@ -75,7 +75,7 @@ struct feature**);
   @return Returns a transformation matrix computed using RANSAC or NULL
   on error or if an acceptable transform could not be computed.
   */
-mv_matrix_t* ransac_xform(struct feature* features, int n, int mtype,
+mv_mat_handle ransac_xform(struct feature* features, int n, int mtype,
     ransac_xform_fn xform_fn, int m, double p_badxform,
     ransac_err_fn err_fn, double err_tol,
     struct feature*** inliers, int* n_in)
@@ -84,7 +84,7 @@ mv_matrix_t* ransac_xform(struct feature* features, int n, int mtype,
     struct feature** matched, ** sample, ** consensus, ** consensus_max = NULL;
     struct ransac_data* rdata;
     mv_point_d_t* pts, *mpts;
-    mv_matrix_t* M = NULL;
+    mv_mat_handle M = NULL;
     double p, in_frac = RANSAC_INLIER_FRAC_EST;
     int i, nm, in, in_min, in_max = 0, k = 0;
 
@@ -118,7 +118,7 @@ mv_matrix_t* ransac_xform(struct feature* features, int n, int mtype,
         }
         else
             free(consensus);
-        mv_release_matrix(&M);
+        mv_release_matrix(M);
 
     iteration_end:
         release_mem(pts, mpts, sample);
@@ -131,7 +131,7 @@ mv_matrix_t* ransac_xform(struct feature* features, int n, int mtype,
         extract_corresp_pts(consensus_max, in_max, mtype, &pts, &mpts);
         M = xform_fn(pts, mpts, in_max);
         in = find_consensus(matched, nm, mtype, M, err_fn, err_tol, &consensus);
-        mv_release_matrix(&M);
+        mv_release_matrix(M);
         release_mem(pts, mpts, consensus_max);
         extract_corresp_pts(consensus, in, mtype, &pts, &mpts);
         M = xform_fn(pts, mpts, in);
@@ -179,9 +179,9 @@ end:
   in pts to their corresponding points in mpts or NULL if fewer than 4
   correspondences were provided
   */
-//mv_matrix_t* dlt_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
+//mv_mat_handle* dlt_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
 //{
-//    mv_matrix_t* H, *A, *VT, *D, h, v9;
+//    mv_mat_handle* H, *A, *VT, *D, h, v9;
 //    double _h[9];
 //    int i;
 //
@@ -209,11 +209,11 @@ end:
 //    D = mv_create_matrix(9, 9, MV_64FC1);
 //    VT = mv_create_matrix(9, 9, MV_64FC1);
 //    mv_svd(A, D, NULL, VT, MV_SVD_MODIFY_A + MV_SVD_V_T);
-//    v9 = mv_matrix_t(1, 9, MV_64FC1, NULL);
+//    v9 = mv_mat_handle(1, 9, MV_64FC1, NULL);
 //    mv_get_row(VT, &v9, 8);
-//    h = mv_matrix_t(1, 9, MV_64FC1, _h);
+//    h = mv_mat_handle(1, 9, MV_64FC1, _h);
 //    mv_copy(&v9, &h, NULL);
-//    h = mv_matrix_t(3, 3, MV_64FC1, _h);
+//    h = mv_mat_handle(3, 3, MV_64FC1, _h);
 //    H = mv_create_matrix(3, 3, MV_64FC1);
 //    mv_convert(&h, H);
 //
@@ -238,27 +238,22 @@ end:
   transforms points in pts to their corresponding points in mpts or NULL if
   fewer than 4 correspondences were provided
   */
-mv_matrix_t* lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
+mv_mat_handle lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
 {
-    mv_matrix_t* H, *A, *B, X;
-    double x[9];
-    int i;
-
-    if (n < 4)
-    {
-        fprintf(stderr, "Warning: too few points in lsq_homog(), %s line %d\n",
-            __FILE__, __LINE__);
+    if (n < 4) {
+        WRITE_WARN_LOG("too few points in lsq_homog()");
         return NULL;
     }
 
     /* set up matrices so we can unstack homography into X; AX = B */
-    A = mv_create_matrix(2 * n, 8, MV_64FC1);
-    B = mv_create_matrix(2 * n, 1, MV_64FC1);
-    X = mv_matrix_t(8, 1, MV_64FC1, x);
-    H = mv_create_matrix(3, 3, MV_64FC1);
+    mv_mat_handle A = mv_create_matrix(2 * n, 8);
+    mv_mat_handle B = mv_create_matrix(2 * n, 1);    
+    mv_vec_handle X = mv_create_vector(8);
+    mv_mat_handle H = mv_create_matrix(3, 3);
+
     mv_matrix_zero(A);
-    for (i = 0; i < n; i++)
-    {
+
+    for (int i = 0; i < n; i++) {
         mv_matrix_set(A, i, 0, pts[i].x);
         mv_matrix_set(A, i + n, 3, pts[i].x);
         mv_matrix_set(A, i, 1, pts[i].y);
@@ -272,13 +267,26 @@ mv_matrix_t* lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
         mv_matrix_set(B, i, 0, mpts[i].x);
         mv_matrix_set(B, i + n, 0, mpts[i].y);
     }
-    mv_solve(A, B, &X, MV_SVD);
-    x[8] = 1.0;
-    X = mv_matrix_t(3, 3, MV_64FC1, x);
-    mv_convert(&X, H);
+    mv_solve(A, B, X);
 
-    mv_release_matrix(&A);
-    mv_release_matrix(&B);
+    //x[8] = 1.0;
+    //mv_mat_handle* XX = mv_create_matrix(3, 3, MV_64FC1);
+    //X = mv_mat_handle(3, 3, MV_64FC1, x);
+    //mv_convert(&X, H);
+
+    mv_matrix_set(H, 0, 0, mv_vector_get(X, 0));
+    mv_matrix_set(H, 0, 1, mv_vector_get(X, 1));
+    mv_matrix_set(H, 0, 2, mv_vector_get(X, 2));
+    mv_matrix_set(H, 1, 0, mv_vector_get(X, 3));
+    mv_matrix_set(H, 1, 1, mv_vector_get(X, 4));
+    mv_matrix_set(H, 1, 2, mv_vector_get(X, 5));
+    mv_matrix_set(H, 2, 0, mv_vector_get(X, 6));
+    mv_matrix_set(H, 2, 1, mv_vector_get(X, 7));
+    mv_matrix_set(H, 2, 2, 1.0);
+    
+
+    mv_release_matrix(A);
+    mv_release_matrix(B);
     return H;
 }
 
@@ -295,7 +303,7 @@ mv_matrix_t* lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
 
   @return Returns the transfer error between pt and mpt given H
   */
-double homog_xfer_err(mv_point_d_t pt, mv_point_d_t mpt, mv_matrix_t* H)
+double homog_xfer_err(mv_point_d_t pt, mv_point_d_t mpt, mv_mat_handle H)
 {
     mv_point_d_t xpt = persp_xform_pt(pt, H);
 
@@ -322,16 +330,23 @@ double homog_xfer_err(mv_point_d_t pt, mv_point_d_t mpt, mv_matrix_t* H)
 
   @return Returns the point (u, v) as above.
   */
-mv_point_d_t persp_xform_pt(mv_point_d_t pt, mv_matrix_t* T)
+mv_point_d_t persp_xform_pt(mv_point_d_t pt, mv_mat_handle T)
 {
-    mv_matrix_t XY, UV;
-    double xy[3] = { pt.x, pt.y, 1.0 }, uv[3] = { 0 };
-    mv_point_d_t rslt;
 
-    mv_init_matrix_header(&XY, 3, 1, MV_64FC1, xy, MV_AUTOSTEP);
-    mv_init_matrix_header(&UV, 3, 1, MV_64FC1, uv, MV_AUTOSTEP);
-    mv_matrix_mul(T, &XY, &UV);
-    rslt = mv_point_d_t(uv[0] / uv[2], uv[1] / uv[2]);
+    mv_mat_handle XY = mv_create_matrix(3, 1);
+    mv_matrix_set(XY, 0, 0, pt.x);
+    mv_matrix_set(XY, 1, 0, pt.y);
+    mv_matrix_set(XY, 2, 0, 1.0);
+
+    mv_mat_handle UV = mv_create_matrix(3, 1);
+    mv_matrix_zero(UV);
+
+    mv_matrix_mul(T, XY, UV);
+
+    double uv0 = mv_matrix_get(UV, 0, 0);
+    double uv1 = mv_matrix_get(UV, 1, 0);
+    double uv2 = mv_matrix_get(UV, 2, 0);
+    mv_point_d_t rslt = mv_point_d_t(uv0 / uv2, uv1 / uv2);
 
     return rslt;
 }
@@ -576,7 +591,7 @@ static void extract_corresp_pts(struct feature** features, int n, int mtype,
   @return Returns the number of points in the consensus set
   */
 static int find_consensus(struct feature** features, int n, int mtype,
-    mv_matrix_t* M, ransac_err_fn err_fn, double err_tol,
+    mv_mat_handle M, ransac_err_fn err_fn, double err_tol,
 struct feature*** consensus)
 {
     struct feature** _consensus;

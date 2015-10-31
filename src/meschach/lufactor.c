@@ -276,7 +276,7 @@ double	LUcondest(const MAT *LU, PERM *pivot)
 	y->ve[i] = sum / LU->me[i][i];
     }
 
-    catch(E_SING,
+    c_catch(E_SING,
 	  LTsolve(LU,y,y,1.0);
 	  LUsolve(LU,pivot,y,z);
 	  ,

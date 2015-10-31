@@ -6,6 +6,7 @@
 
 
 #include "mv_base.h"
+#include "mat_proc.h"
 
 
 
@@ -64,7 +65,9 @@ mv_image_t* mv_clone_image(const mv_image_t* image);
 mv_image_t* mv_create_image(mv_size_t size, int depth, int channels);
 void mv_release_image(mv_image_t** image);
 void mv_normalize_u8(const mv_image_t* src, mv_image_t* dst, double scale); 
+
 void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst);
+
 void mv_resize_nn(const mv_image_t* src, mv_image_t* dst);
 
 static inline mv_size_t mv_get_size(const mv_image_t* image) {
@@ -80,7 +83,7 @@ void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst);
 void mv_set_image_roi(mv_image_t* image, mv_rect_t rect);
 void mv_reset_image_roi(mv_image_t* image);
 void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst);
-void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix_t* map_matrix, int flags, mv_scalar_t fillval);
+void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_mat_handle map_matrix, int flags, mv_scalar_t fillval);
 
 
 

@@ -3,6 +3,7 @@
 
 #include <assert.h>
 
+#include "opensift/utils.h"
 #include "mv_base.h"
 #include "img_proc.h"
 
@@ -127,15 +128,75 @@ void mv_release_image(mv_image_t** image)
 }
 
 
+
+
+//static void mv_resize_cubic_byte(const mv_image_t* src, mv_image_t* dst)
+//{
+//    double scale_x = (double)src->width / dst->width;
+//    double scale_y = (double)src->height / dst->height;
+//    mv_byte* dataDst = (mv_byte*)dst->imageData;
+//    int stepDst = dst->widthStep;
+//    mv_byte* dataSrc = (mv_byte*)src->imageData;
+//    int stepSrc = src->widthStep;
+//    int iWidthSrc = src->width;
+//    int iHiehgtSrc = src->height;
+//
+//    for (int j = 0; j < dst->height; ++j)
+//    {
+//        float fy = (float)((j + 0.5) * scale_y - 0.5);
+//        int sy = mv_floor(fy);
+//        fy -= sy;
+//        sy = MIN(sy, iHiehgtSrc - 2);
+//        sy = MAX(0, sy);
+//
+//        short cbufy[2];
+//        cbufy[0] = saturate_cast<short>((1.f - fy) * 2048);
+//        cbufy[1] = 2048 - cbufy[0];
+//
+//        for (int i = 0; i < dst->width; ++i)
+//        {
+//            float fx = (float)((i + 0.5) * scale_x - 0.5);
+//            int sx = mv_floor(fx);
+//            fx -= sx;
+//
+//            if (sx < 0) {
+//                fx = 0, sx = 0;
+//            }
+//            if (sx >= iWidthSrc - 1) {
+//                fx = 0, sx = iWidthSrc - 2;
+//            }
+//
+//            short cbufx[2];
+//            cbufx[0] = saturate_cast<short>((1.f - fx) * 2048);
+//            cbufx[1] = 2048 - cbufx[0];
+//
+//            dataDst[j*stepDst + i] =
+//                (
+//                dataSrc[sy*stepSrc + sx] * cbufx[0] * cbufy[0] +
+//                dataSrc[(sy + 1)*stepSrc + sx] * cbufx[0] * cbufy[1] +
+//                dataSrc[sy*stepSrc + (sx + 1)] * cbufx[1] * cbufy[0] +
+//                dataSrc[(sy + 1)*stepSrc + (sx + 1)] * cbufx[1] * cbufy[1]
+//                ) >> 22;
+//        }
+//    }
+//}
+//
+
+
+
+
 void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst)
 {
+    // 目前只支持FLOAT类型    
+    assert(src->depth == 32 && src->nChannels == 1);
+    assert(dst->depth == 32 && dst->nChannels == 1);
 
     double scale_x = (double)src->width / dst->width;
     double scale_y = (double)src->height / dst->height;
-    uchar* dataDst = dst->imageData;
-    int stepDst = dst->widthStep;
-    uchar* dataSrc = src->imageData;
-    int stepSrc = src->widthStep;
+    mv_float* dataDst = (mv_float*)dst->imageData;
+    int stepDst = dst->width;
+    mv_float* dataSrc = (mv_float*)src->imageData;
+    int stepSrc = src->width;
     int iWidthSrc = src->width;
     int iHiehgtSrc = src->height;
 
@@ -147,9 +208,9 @@ void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst)
         sy = MIN(sy, iHiehgtSrc - 2);
         sy = MAX(0, sy);
 
-        short cbufy[2];
-        cbufy[0] = saturate_cast<short>((1.f - fy) * 2048);
-        cbufy[1] = 2048 - cbufy[0];
+        double cbufy[2];
+        cbufy[0] = 1.f - fy;
+        cbufy[1] = fy;
 
         for (int i = 0; i < dst->width; ++i)
         {
@@ -164,9 +225,9 @@ void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst)
                 fx = 0, sx = iWidthSrc - 2;
             }
 
-            short cbufx[2];
-            cbufx[0] = saturate_cast<short>((1.f - fx) * 2048);
-            cbufx[1] = 2048 - cbufx[0];
+            double cbufx[2];
+            cbufx[0] = 1.f - fx;
+            cbufx[1] = fx;
 
             dataDst[j*stepDst + i] =
                 (
@@ -174,16 +235,25 @@ void mv_resize_cubic(const mv_image_t* src, mv_image_t* dst)
                 dataSrc[(sy + 1)*stepSrc + sx] * cbufx[0] * cbufy[1] +
                 dataSrc[sy*stepSrc + (sx + 1)] * cbufx[1] * cbufy[0] +
                 dataSrc[(sy + 1)*stepSrc + (sx + 1)] * cbufx[1] * cbufy[1]
-                ) >> 22;
+                );
         }
     }
-
 }
+
+
+
 
 void mv_resize_nn(const mv_image_t* src, mv_image_t* dst)
 {    
+    // 目前只支持FLOAT类型
+    assert(src->depth == 32 && src->nChannels == 1);
+    assert(dst->depth == 32 && dst->nChannels == 1);
+
     double scale_x = (double)src->width / dst->width;
     double scale_y = (double)src->height / dst->height;
+
+    mv_float* src_data = (mv_float*)src->imageData;
+    mv_float* dst_data = (mv_float*)dst->imageData;    
 
     for (int y = 0; y < dst->height; ++y) {
 
@@ -193,7 +263,7 @@ void mv_resize_nn(const mv_image_t* src, mv_image_t* dst)
         for (int x = 0; x < dst->width; ++x) {
             int sx = mv_floor(x * scale_x);
             sx = MIN(sx, src->width - 1);
-            dst->imageData[y * dst->widthStep + x] = src->imageData[sy * src->widthStep + sx];
+            dst_data[y * dst->width + x] = src_data[sy * src->width + sx];
         }
     }
 }
@@ -264,7 +334,7 @@ void mv_convert_gray(const mv_image_t* src, mv_image_t* dst)
 
 
 
-void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_matrix_t* map_matrix, int flags, mv_scalar_t fillval)
+void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_mat_handle map_matrix, int flags, mv_scalar_t fillval)
 {
 
 }
@@ -292,18 +362,23 @@ void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src
 
 /** dst(mask) = src1(mask) - src2(mask) */
 void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst)
-{    
+{   
+    // 目前只支持FLOAT类型
+    assert(src1->depth == 32 && src1->nChannels == 1);
+    assert(src2->depth == 32 && src2->nChannels == 1);
+    assert(dst->depth == 32 && dst->nChannels == 1);
     assert(src1->width == src2->width && src1->height == src2->height);
     assert(src1->width == dst->width && src1->height == dst->height);
-
-    mv_byte* p1 = src1->imageData;
-    mv_byte* p2 = src2->imageData;
-    mv_byte* result = dst->imageData;
+    
+    mv_float* p1 = (mv_float*)src1->imageData;
+    mv_float* p2 = (mv_float*)src2->imageData;
+    mv_float* result = (mv_float*)dst->imageData;
 
     int size = src1->height * src1->width;
     
     for (int i = 0; i < size; i++) {
-        result[i] = saturate_cast<mv_byte>(p1[i] - p2[i]);
+        //result[i] = saturate_cast<mv_byte>(p1[i] - p2[i]);
+        result[i] = p1[i] - p2[i];
     }
 }
 
@@ -311,7 +386,7 @@ void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst)
 
 // box blur 
 // refencence： http://blog.ivank.net/fastest-gaussian-blur.html
-static void box_blur_horizontal(mv_byte* src, mv_byte* dst, int width, int height, double sigma)
+static void box_blur_horizontal(mv_float* src, mv_float* dst, int width, int height, double sigma)
 {
     double iarr = 1 / (sigma + sigma + 1);
 
@@ -329,22 +404,28 @@ static void box_blur_horizontal(mv_byte* src, mv_byte* dst, int width, int heigh
 
         for (int j = 0; j <= sigma; j++) { 
             val += src[ri++] - fv;   
-            dst[ti++] = mv_round(val*iarr);
+            dst[ti++] = val*iarr;
+            //dst[ti++] = mv_round(val*iarr);
+            //dst[ti++] = saturate_cast<T>(val*iarr);
         }
 
         for (int j = sigma + 1; j<width - sigma; j++) {
             val += src[ri++] - src[li++];   
-            dst[ti++] = mv_round(val*iarr);
+            dst[ti++] = val*iarr;
+            //dst[ti++] = mv_round(val*iarr);
+            //dst[ti++] = saturate_cast<T>(val*iarr);
         }
 
         for (int j = width - sigma; j<width; j++) { 
             val += lv - src[li++];   
-            dst[ti++] = mv_round(val*iarr);
+            dst[ti++] = val*iarr;
+            //dst[ti++] = mv_round(val*iarr);
+            //dst[ti++] = saturate_cast<T>(val*iarr);            
         }
     }
 }
 
-static void box_blur_total(mv_byte* src, mv_byte* dst, int width, int height, double sigma)
+static void box_blur_total(mv_float* src, mv_float* dst, int width, int height, double sigma)
 {
     double iarr = 1 / (sigma + sigma + 1);
 
@@ -362,38 +443,51 @@ static void box_blur_total(mv_byte* src, mv_byte* dst, int width, int height, do
 
         for (int j = 0; j <= sigma; j++) { 
             val += src[ri] - fv;  
-            dst[ti] = mv_round(val*iarr);  
+            dst[ti] = val*iarr;  
+            //dst[ti] = mv_round(val*iarr);
+            //dst[ti] = saturate_cast<mv_float>(val*iarr);
             ri += width; ti += width; 
         }
 
         for (int j = sigma + 1; j < height - sigma; j++) { 
             val += src[ri] - src[li];  
-            dst[ti] = mv_round(val*iarr);
+            dst[ti] = val*iarr;
+            //dst[ti] = mv_round(val*iarr);
+            //dst[ti] = saturate_cast<T>(val*iarr);
             li += width; ri += width; ti += width; 
         }
 
         for (int j = height - sigma; j < height; j++) {
             val += lv - src[li];  
-            dst[ti] = mv_round(val*iarr);
+            dst[ti] = val*iarr;
+            //dst[ti] = mv_round(val*iarr);
+            //dst[ti] = saturate_cast<T>(val*iarr);
             li += width; ti += width; 
         }
     }
 }
 
 
-static inline void box_blur_impl(mv_byte* src, mv_byte* dst, int width, int height, double sigma)
-{
-    int size = width * height;
-    for (int i = 0; i<size; i++)
-        dst[i] = src[i];
 
-    box_blur_horizontal(dst, src, width, height, sigma);
-    box_blur_total(src, dst, width, height, sigma);
+static inline void box_blur_impl(void* src, void* dst, int width, int height, double sigma)
+{
+    mv_float* src_f = (mv_float*)src;
+    mv_float* dst_f = (mv_float*)dst;
+    int size = width * height;
+    for (int i = 0; i < size; i++)
+        dst_f[i] = src_f[i];
+
+    box_blur_horizontal(dst_f, src_f, width, height, sigma);
+    box_blur_total(src_f, dst_f, width, height, sigma);
 }
 
 // todo(scott.zgeng): 缓冲后续最好是在外部申请
 void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma)
 {
+    // 目前只支持FLOAT类型
+    assert(src->depth == 32 && src->nChannels == 1);
+    assert(dst->depth == 32 && dst->nChannels == 1);
+
     static const int PASS_NUM = 3;
     double kernel[PASS_NUM];
 
@@ -410,15 +504,16 @@ void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma)
     }
 
     int width = src->width;
-    int height = src->height;
+    int height = src->height;    
+    int image_size = width * height * sizeof(mv_float);
 
-    mv_byte* p1 = (mv_byte* )mv_malloc(width*height);
-    memcpy(p1, src->imageData, width*height);
+    mv_byte* p1 = (mv_byte*)mv_malloc(image_size);
+    memcpy(p1, src->imageData, image_size);
     mv_byte* p2 = dst->imageData;
 
     box_blur_impl(p1, p2, width, height, kernel[0]);
     box_blur_impl(p2, p1, width, height, kernel[1]);
-    box_blur_impl(p1, p2, width, height, kernel[2]);
+    box_blur_impl(p1, p2, width, height, kernel[2]);   
 
     mv_free(p1);
 }

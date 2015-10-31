@@ -278,53 +278,55 @@ struct mv_size_t
 };
 
 
-struct mv_matrix_t
-{
-    int type;
-    int step;
-
-    // for internal use only 
-    int* refcount;
-    int hdr_refcount;
-
-    union
-    {
-        unsigned char* ptr;
-        short* s;
-        int* i;
-        float* fl;
-        double* db;
-    } data;
-
-    int rows;
-    int cols;
 
 
-    mv_matrix_t() {
-        type = 0;
-        step = 0;
-
-        cols = 0;
-        rows = 0;
-        
-        data.ptr = NULL;
-
-        refcount = NULL;
-        hdr_refcount = 0;
-    }
-
-    mv_matrix_t(int r, int c, int t, void* ptr)
-    {        
-        type = MV_MAT_TYPE(t);
-        type = MV_MAT_MAGIC_VAL | MV_MAT_CONT_FLAG | t;
-        cols = c;
-        rows = r;
-        step = c * MV_ELEM_SIZE(t);
-        data.ptr = (unsigned char*)ptr;
-        refcount = NULL;
-        hdr_refcount = 0; 
-    }
-};
+//struct mv_matrix_t
+//{
+//    int type;
+//    int step;
+//
+//    // for internal use only 
+//    int* refcount;
+//    int hdr_refcount;
+//
+//    union
+//    {
+//        unsigned char* ptr;
+//        short* s;
+//        int* i;
+//        float* fl;
+//        double* db;
+//    } data;
+//
+//    int rows;
+//    int cols;
+//
+//
+//    mv_matrix_t() {
+//        type = 0;
+//        step = 0;
+//
+//        cols = 0;
+//        rows = 0;
+//        
+//        data.ptr = NULL;
+//
+//        refcount = NULL;
+//        hdr_refcount = 0;
+//    }
+//
+//    mv_matrix_t(int r, int c, int t, void* ptr)
+//    {        
+//        type = MV_MAT_TYPE(t);
+//        type = MV_MAT_MAGIC_VAL | MV_MAT_CONT_FLAG | t;
+//        cols = c;
+//        rows = r;
+//        step = c * MV_ELEM_SIZE(t);
+//        data.ptr = (unsigned char*)ptr;
+//        refcount = NULL;
+//        hdr_refcount = 0; 
+//    }
+//};
 
 
 
@@ -454,21 +456,6 @@ inline int mv_floor(double value)
 }
 
 
-inline void  mv_matrix_set(mv_matrix_t* mat, int row, int col, double value)
-{
-    int type;
-    type = MV_MAT_TYPE(mat->type);
-    //assert((unsigned)row < (unsigned)mat->rows && (unsigned)col < (unsigned)mat->cols);
-
-    if (type == MV_32FC1)
-        ((float*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (float)value;
-    else
-    {
-        //assert(type == MV_64FC1);
-        ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = value;
-    }
-}
-
 
 
 
@@ -563,24 +550,43 @@ template<> inline mv_uint32 saturate_cast<mv_uint32>(mv_double v)   { return mv_
 
 
 
+
+
+
+
+
 // 13  先不移植，等图像部分移植完成后再考虑
-mv_matrix_t* mv_create_matrix(int rows, int cols, int type);
-void mv_release_matrix(mv_matrix_t** mat);
-mv_matrix_t* mv_clone_matrix(const mv_matrix_t* mat);
-mv_matrix_t* mv_init_matrix_header(mv_matrix_t* mat, int rows, int cols, int type, void* data, int step);
-void mv_matrix_zero(mv_matrix_t* mat);
-
-double mv_invert(mv_matrix_t* src, mv_matrix_t* dst, int method);  
-void mv_matrix_mul(const mv_matrix_t* src1, const mv_matrix_t* src2, mv_matrix_t* dst);
-void mv_matrix_mul_add_ex(const mv_matrix_t* src1, const mv_matrix_t* src2, double alpha,
-    const mv_matrix_t* src3, double beta, mv_matrix_t* dst, int tABC);
-
-int mv_solve(const mv_matrix_t* src1, const mv_matrix_t* src2, mv_matrix_t* dst, int method);   // SVD 
 
 
-void mv_convert(const mv_matrix_t* src, mv_matrix_t* dst);     // COPY?
+
+//
+//
+//
+//double mv_invert(mv_mat_handle src, mv_mat_handle dst);  // MV_LU 高斯消去法   MV_SVD
+//void mv_matrix_mul(const mv_mat_handle src1, const mv_mat_handle src2, mv_mat_handle dst);
+//void mv_matrix_mul_add_ex(const mv_mat_handle src1, const mv_mat_handle src2, double alpha,
+//    const mv_mat_handle src3, double beta, mv_mat_handle dst, int tABC);
 
 
+///** Matrix transform: dst = A*B + C, C is optional */
+//#define cvMatMulAdd( src1, src2, src3, dst ) cvGEMM( (src1), (src2), 1., (src3), 1., (dst), 0 )
+//#define cvMatMul( src1, src2, dst )  cvMatMulAdd( (src1), (src2), NULL, (dst))
+//
+//#define CV_GEMM_A_T 1
+//#define CV_GEMM_B_T 2
+//#define CV_GEMM_C_T 4
+///** Extended matrix transform:
+//dst = alpha*op(A)*op(B) + beta*op(C), where op(X) is X or X^T */
+//CVAPI(void)  cvGEMM(const CvArr* src1, const CvArr* src2, double alpha,
+//    const CvArr* src3, double beta, CvArr* dst,
+//    int tABC CV_DEFAULT(0));
+//#define cvMatMulAddEx cvGEMM
+
+
+
+
+
+//void mv_convert(const mv_matrix_t* src, mv_matrix_t* dst);     // COPY?
 //void mv_copy(const mv_matrix_t* src, mv_matrix_t* dst, const mv_matrix_t* mask);
 //void mv_eigen_val_vector(mv_matrix_t* mat, mv_matrix_t* evects, mv_matrix_t* evals, double eps, int lowindex, int highindex);  //OK
 //void mv_svd(mv_matrix_t* A, mv_matrix_t* W, mv_matrix_t* U, mv_matrix_t* V, int flags);  //OK

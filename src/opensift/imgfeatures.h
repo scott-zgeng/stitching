@@ -53,8 +53,7 @@ struct feature
     double c;                      /**< Oxford-type affine region parameter */
     double scl;                    /**< scale of a Lowe-style feature */
     double ori;                    /**< orientation of a Lowe-style feature */
-    int d;                         /**< descriptor length */
-    double descr[FEATURE_MAX_D];   /**< descriptor */
+    int d;                         /**< descriptor length */    
     int type;                      /**< feature type, OXFD or LOWE */
     int category;                  /**< all-purpose feature category */
     struct feature* fwd_match;     /**< matching feature from forward image */
@@ -63,6 +62,7 @@ struct feature
     mv_point_d_t img_pt;           /**< location in image */
     mv_point_d_t mdl_pt;           /**< location in model */
     void* feature_data;            /**< user-definable data */
+    double descr[FEATURE_MAX_D];   /**< descriptor */
 };
 
 
