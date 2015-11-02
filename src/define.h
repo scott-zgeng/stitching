@@ -29,6 +29,7 @@ typedef double mv_double;
 
 // fundamental constants 
 #define MV_PI           (3.1415926535897932384626433832795)
+#define MV_PI2          (MV_PI*2.0)
 #define MV_LOG2         (0.69314718055994530941723212145818)
 
 #ifndef MIN

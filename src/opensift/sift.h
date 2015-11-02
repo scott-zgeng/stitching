@@ -21,37 +21,20 @@
 #define SIFT_H
 
 #include "../img_proc.h"
-
-/******************************** Structures *********************************/
-
-/** holds feature data relevant to detection */
-struct detection_data
-{
-    int r;
-    int c;
-    int octv;
-    int intvl;
-    double subintvl;
-    double scl_octv;
-};
-
-struct feature;
-
 #include "../mv_vector.h"
 
-/******************************* Defs and macros *****************************/
-
-
-/* returns a feature's detection data */
-#define feat_detection_data(f) ( (struct detection_data*)(f->feature_data) )
-
-
-
-
+#include "imgfeatures.h"
 
 class sift_runtime
 {
 public:
+    struct pyramid_layer
+    {
+        mv_image_t* curr;
+        mv_image_t* prev;
+        mv_image_t* next;
+    };
+
     static const int MAX_FEATURE_SIZE = 1024 * 2;  // 最多保存的特征数
 
     /** default number of sampled intervals per octave */
@@ -110,16 +93,15 @@ public:
 
     static const int MAX_OCTVS = 10; 
 
+    const double PRELIM_CONTR_THR = 0.5 * SIFT_CONTR_THR / SIFT_INTVLS;
 
-public:
-    typedef public mv_vector<feature*, MAX_FEATURE_SIZE> mv_features;
 
 public:
     sift_runtime();
     virtual ~sift_runtime();
 
 public:   
-
+    typedef public mv_vector<feature*, MAX_FEATURE_SIZE> mv_features;
 
     /**
     Finda SIFT features in an image using user-specified parameter values.  All
@@ -151,33 +133,73 @@ public:
     int process(mv_image_t* img, mv_features* features);
 
 private:
-    mv_image_t* create_init_img(mv_image_t* img, int img_dbl, double sigma);
-    mv_image_t* convert_to_gray32(mv_image_t* img);
-
 
     inline mv_image_t* gauss_pyramid(int octvs, int intval) {
-        return m_gauss_pyr[octvs * m_octvs_step + intval];
+        return m_gauss_pyr[octvs * m_octvs + intval];
     }
 
     inline void set_gauss_pyramid(mv_image_t* img, int octvs, int intval) {
-        m_gauss_pyr[octvs * m_octvs_step + intval] = img;
+        m_gauss_pyr[octvs * m_octvs + intval] = img;
     }
 
     inline mv_image_t* dog_pyramid(int octvs, int intval) {
-        return m_dog_pyr[octvs * m_octvs_step + intval];
+        return m_dog_pyr[octvs * m_octvs + intval];
     }
 
     inline void set_dog_pyramid(mv_image_t* img, int octvs, int intval) {
-        m_dog_pyr[octvs * m_octvs_step + intval] = img;
+        m_dog_pyr[octvs * m_octvs + intval] = img;
     }
 
-    int build_gauss_pyramid(mv_image_t* base, int octvs, double sigma);
-    int build_dog_pyr(int octvs, int intvls);
+private:
+    mv_image_t* create_init_img(mv_image_t* img, bool is_double);
+    
+    int build_gauss_pyramid(mv_image_t* base);
+    int build_dog_pyramid();
+
+    mv_image_t* sift_runtime::downsample(mv_image_t* img);
+    int scale_space_extrema();
+    
+    bool is_extremum(pyramid_layer* dogs, int r, int c);
+    struct feature* interp_extremum(pyramid_layer* dogs, int octv, int intvl, int r, int c);
+    void interp_step(pyramid_layer* dogs, int r, int c, double* xi, double* xr, double* xc);       
+    
+    mv_mat_handle hessian_3D(pyramid_layer* dogs, int r, int c);
+    void deriv_3D(pyramid_layer* dogs, int r, int c, double* result);
+    double interp_contr(pyramid_layer* dogs, int r, int c, double xi, double xr, double xc);           
+    
+    struct feature* new_feature();
+    void release_last_feature();
+    bool is_too_edge_like(mv_image_t* dog, int r, int c);
+
+    void calc_feature_scales();
+    void adjust_for_img_dbl();
+
+    void ori_hist(double* hist, mv_image_t* img, int r, int c, int rad, double sigma);
+    
+    void calc_feature_oris();
+
+    int calc_grad_mag_ori(mv_image_t* img, int r, int c, double* mag, double* ori);
+    void smooth_ori_hist(double* hist);
+    double dominant_ori(double* hist);
+
+    void adjust_good_ori_features(double* hist, double mag_thr, feature* feat);
+    
+    void compute_descriptors();
+    void descr_hist(double* hist, mv_image_t* img, int r, int c, double ori, double scl);
+    void interp_hist_entry(double* hist, double rbin, double cbin, double obin, double mag);    
+    void hist_to_descr(double* hist, struct feature* feat);
+
+    void normalize_descr(struct feature*);
+    static int feature_cmp(const void* feat1, const void* feat2);
+    void release_pyramid();
+
+    void export(mv_features* features);
 
 private:
     feature m_pool[MAX_FEATURE_SIZE];    
     int m_pool_used;
-    int m_octvs_step;
+
+    int m_octvs;
     mv_image_t* m_gauss_pyr[MAX_OCTVS * SIFT_INTVLS + MAX_OCTVS * 3];
     mv_image_t* m_dog_pyr[MAX_OCTVS * SIFT_INTVLS + MAX_OCTVS * 3];
 };

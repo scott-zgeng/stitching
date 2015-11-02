@@ -38,6 +38,17 @@ enum feature_match_type
 #define FEATURE_MAX_D 128
 
 
+struct detection_data
+{
+    int r;
+    int c;
+    int octv;
+    int intvl;
+    double subintvl;
+    double scl_octv;
+};
+
+
 /**
    Structure to represent an affine invariant image feature.  The fields
    x, y, a, b, c represent the affine region around the feature:
@@ -63,6 +74,8 @@ struct feature
     mv_point_d_t mdl_pt;           /**< location in model */
     void* feature_data;            /**< user-definable data */
     double descr[FEATURE_MAX_D];   /**< descriptor */
+
+    detection_data ddata;
 };
 
 
