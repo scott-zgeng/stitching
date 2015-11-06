@@ -16,7 +16,7 @@ mv_mat_handle mv_clone_matrix(const mv_mat_handle mat);
 
 void mv_matrix_zero(mv_mat_handle mat);
 void mv_matrix_set(mv_mat_handle mat, int row, int col, double value);
-
+double mv_matrix_get(mv_mat_handle mat, int row, int col);
 
 //CV_LU
 // Gaussian elimination with optimal pivot element chose In case of LU method 
@@ -30,13 +30,9 @@ bool mv_invert(mv_mat_handle src, mv_mat_handle dst);
 // value to the largest singular value) and 0 if src1 is all zeros. The SVD  
 // methods calculate a pseudo - inverse matrix if src1 is singular
 double mv_invert_svd(mv_mat_handle src, mv_mat_handle dst);
-
 void mv_matrix_mul(const mv_mat_handle src1, const mv_mat_handle src2, mv_mat_handle dst);
-
-
-double mv_matrix_get(mv_mat_handle mat, int row, int col);
-
 int mv_solve(const mv_mat_handle src1, const mv_mat_handle src2, mv_vec_handle dst);   // SVD 
+
 
 mv_vec_handle mv_create_vector(int n);
 void mv_release_vector(mv_vec_handle vec);

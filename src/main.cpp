@@ -504,10 +504,34 @@ void test_matrix()
     m_inverse(new_m, result);
 
     VEC* out_v = v_get(2);
-    svd(new_m, result, NULL, out_v);
+    
+    MAT* new_n = m_get(2, 2);
+    m_set_val(new_n, 0, 0, 4);
+    m_set_val(new_n, 0, 1, 3);
+    m_set_val(new_n, 1, 0, 2);
+    m_set_val(new_n, 1, 1, 1);
+    svd(new_m, new_n, NULL, out_v);
+    WRITE_INFO_LOG("%f, %f", out_v->ve[0], out_v->ve[1]);
+    
+    CvMat* H = cvCreateMat(2, 2, CV_64FC1);
+    cvmSet(H, 0, 0, 1);
+    cvmSet(H, 0, 1, 2);
+    cvmSet(H, 1, 0, 3);
+    cvmSet(H, 1, 1, 4);
+    
 
-    m_free(new_m);
+    CvMat* V = cvCreateMat(2, 2, CV_64FC1);
+    cvmSet(V, 0, 0, 4);
+    cvmSet(V, 0, 1, 3);
+    cvmSet(V, 1, 0, 2);
+    cvmSet(V, 1, 1, 1);
 
+    CvMat* R = cvCreateMat(2, 2, CV_64FC1);
+    cvSolve(H, V, R, CV_SVD);
+    WRITE_INFO_LOG("%f, %f", cvmGet(R, 0, 0), cvmGet(R, 0, 1));
+    WRITE_INFO_LOG("%f, %f", cvmGet(R, 1, 0), cvmGet(R, 1, 1));
+    
+    WRITE_INFO_LOG("s");
 
     //m_add()	        Add matrices
     //m_mlt()	        Multiplies matrices
@@ -521,9 +545,9 @@ void test_matrix()
 
 int main(int argc, char** argv)
 {
-    image_stitching();
+    //image_stitching();
     //test_image_proc();
-    //test_matrix();
+    test_matrix();
 
     return 0;
 }

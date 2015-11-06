@@ -193,7 +193,7 @@ private:
     static int feature_cmp(const void* feat1, const void* feat2);
     void release_pyramid();
 
-    void export(mv_features* features);
+    void export_features(mv_features* features);
 
 private:
     feature m_pool[MAX_FEATURE_SIZE];    

@@ -199,7 +199,6 @@ int sift_runtime::scale_space_extrema()
     detection_data* ddata;
     pyramid_layer dogs;
 
-    
     for (int o = 0; o < octvs; o++) {
         int height = dog_pyramid(o, 0)->height;
         int width = dog_pyramid(o, 0)->width;
@@ -1128,7 +1127,7 @@ sift_runtime::~sift_runtime()
 
 }
 
-void sift_runtime::export(mv_features* features)
+void sift_runtime::export_features(mv_features* features)
 {
     feature* items[MAX_FEATURE_SIZE];
     for (int i = 0; i < m_pool_used; i++) {
@@ -1167,7 +1166,7 @@ int sift_runtime::process(mv_image_t* img, mv_features* features)
     calc_feature_oris();
     compute_descriptors();
 
-    export(features);
+    export_features(features);
     
     mv_release_image(&base);
     release_pyramid();    

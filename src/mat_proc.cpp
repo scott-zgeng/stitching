@@ -52,6 +52,7 @@ bool mv_invert(mv_mat_handle src, mv_mat_handle dst)
 
 double mv_invert_svd(mv_mat_handle src, mv_mat_handle dst)
 {
+    //m_inverse((MAT*)src, (MAT*)dst);
     // 该函数需要实现
     return 0.0;
 }
