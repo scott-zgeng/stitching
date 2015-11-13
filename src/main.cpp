@@ -104,15 +104,14 @@ int image_stitching()
     //stacked = stack_imgs(img1, img2);
 
     WRITE_INFO_LOG("Finding features in %s...", imgfile1);
-    sift_runtime* sift1 = new sift_runtime();
-    sift_runtime::mv_features features1;
+    sift_module* sift1 = sift_module::create_instance();
+    sift_module::mv_features features1;
     sift1->process(img1, &features1);
     
-    sift_runtime* sift2 = new sift_runtime();
-    sift_runtime::mv_features features2;
+    sift_module* sift2 = sift_module::create_instance();
+    sift_module::mv_features features2;
     WRITE_INFO_LOG("Finding features in %s...", imgfile2);
     sift2->process(img2, &features2);
-
 
     WRITE_INFO_LOG("Building kd tree...");
     kd_root = kdtree_build(features1[0], features1.size());
@@ -483,12 +482,12 @@ int test_image_proc() {
     return 0;
 }
 
-
-
-extern "C" {
-#include "meschach/matrix.h"
-#include "meschach/matrix2.h"
-}
+//
+//
+//extern "C" {
+//#include "meschach/matrix.h"
+//#include "meschach/matrix2.h"
+//}
 
 
 void test_matrix()
@@ -510,7 +509,7 @@ void test_matrix()
     m_set_val(new_n, 0, 1, 3);
     m_set_val(new_n, 1, 0, 2);
     m_set_val(new_n, 1, 1, 1);
-    svd(new_m, new_n, NULL, out_v);
+    svd(new_m, NULL, new_n, out_v);
     WRITE_INFO_LOG("%f, %f", out_v->ve[0], out_v->ve[1]);
     
     CvMat* H = cvCreateMat(2, 2, CV_64FC1);
@@ -539,16 +538,16 @@ void test_matrix()
     //mv_mlt()	        Computes  Ax
     //mv_mltadd()	    Computes  y <-Ax + y
     //m_zero()	        Zero a matrix
-
+    //cvInvert()
 }
 
 
 int main(int argc, char** argv)
 {
-    //image_stitching();
+    image_stitching();
     //test_image_proc();
-    test_matrix();
-
+    //test_matrix();
+    cvWaitKey(0);
     return 0;
 }
 
