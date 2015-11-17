@@ -25,13 +25,12 @@
 
 #include "imgfeatures.h"
 
+static const int MAX_FEATURE_SIZE = 1024 * 2;
+typedef mv_vector<feature*, MAX_FEATURE_SIZE> mv_features;
+
 
 class sift_module
-{
-public:
-    static const int MAX_FEATURE_SIZE = 1024 * 2;
-    typedef public mv_vector<feature*, MAX_FEATURE_SIZE> mv_features;
-
+{ 
 public:
     virtual ~sift_module() = 0;
     virtual int process(mv_image_t* img, mv_features* features) = 0;

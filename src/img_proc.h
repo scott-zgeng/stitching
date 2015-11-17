@@ -83,7 +83,8 @@ void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst);
 void mv_set_image_roi(mv_image_t* image, mv_rect_t rect);
 void mv_reset_image_roi(mv_image_t* image);
 void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst);
-void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_mat_handle map_matrix, int flags, mv_scalar_t fillval);
+
+void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, void* map_matrix, int flags, mv_scalar_t fillval);
 
 
 

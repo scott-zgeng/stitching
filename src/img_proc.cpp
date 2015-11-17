@@ -334,7 +334,7 @@ void mv_convert_gray(const mv_image_t* src, mv_image_t* dst)
 
 
 
-void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, const mv_mat_handle map_matrix, int flags, mv_scalar_t fillval)
+void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, void* map_matrix, int flags, mv_scalar_t fillval)
 {
 
 }

@@ -694,7 +694,8 @@ private:
         double bins_per_rad = SIFT_DESCR_HIST_BINS / MV_PI2;
         double exp_denom = SIFT_DESCR_WIDTH * SIFT_DESCR_WIDTH * 0.5;
         double hist_width = SIFT_DESCR_SCL_FCTR * scl;
-        int radius = hist_width * sqrt(2.0) * (SIFT_DESCR_WIDTH + 1.0) * 0.5 + 0.5;
+        int radius = mv_floor(hist_width * sqrt(2.0) * (SIFT_DESCR_WIDTH + 1.0) * 0.5 + 0.5);
+
         for (int i = -radius; i <= radius; i++) {
             for (int j = -radius; j <= radius; j++) {
             
@@ -780,7 +781,7 @@ private:
         int int_val;
         for (int i = 0; i < k; i++)
         {
-            int_val = SIFT_INT_DESCR_FCTR * feat->descr[i];
+            int_val = (int)(SIFT_INT_DESCR_FCTR * feat->descr[i]);
             feat->descr[i] = MIN(255, int_val);
         }
     }

@@ -18,639 +18,301 @@
 #include "imgfeatures.h"
 #include "utils.h"
 
+//#include <Eigen/Dense>
+//using namespace Eigen;
 
 
-/************************* Local Function Prototypes *************************/
 
-static inline struct feature* get_match(struct feature*, int);
-static int get_matched_features(struct feature*, int, int, struct feature***);
-static int calc_min_inliers(int, int, double, double);
-static inline double log_factorial(int);
-static struct feature** draw_ransac_sample(struct feature**, int, int);
-static void extract_corresp_pts(struct feature**, int, int, mv_point_d_t**,
-    mv_point_d_t**);
-static int find_consensus(struct feature**, int, int, mv_mat_handle, ransac_err_fn,
-    double, struct feature***);
-static inline void release_mem(mv_point_d_t*, mv_point_d_t*,
-struct feature**);
-
-/********************** Functions prototyped in model.h **********************/
+///* extracts a feature's RANSAC data */
+//#define feat_ransac_data( feat ) ( (struct ransac_data*) (feat)->feature_data )
 
 
-/*
-  Calculates a best-fit image transform from image feature correspondences
-  using RANSAC.
 
-  For more information refer to:
 
-  Fischler, M. A. and Bolles, R. C.  Random sample consensus: a paradigm for
-  model fitting with applications to image analysis and automated cartography.
-  <EM>Communications of the ACM, 24</EM>, 6 (1981), pp. 381--395.
-
-  @param features an array of features; only features with a non-NULL match
-  of type mtype are used in homography computation
-  @param n number of features in feat
-  @param mtype determines which of each feature's match fields to use
-  for model computation; should be one of FEATURE_FWD_MATCH,
-  FEATURE_BCK_MATCH, or FEATURE_MDL_MATCH; if this is FEATURE_MDL_MATCH,
-  correspondences are assumed to be between a feature's img_pt field
-  and its match's mdl_pt field, otherwise correspondences are assumed to
-  be between the the feature's img_pt field and its match's img_pt field
-  @param xform_fn pointer to the function used to compute the desired
-  transformation from feature correspondences
-  @param m minimum number of correspondences necessary to instantiate the
-  model computed by xform_fn
-  @param p_badxform desired probability that the final transformation
-  returned by RANSAC is corrupted by outliers (i.e. the probability that
-  no samples of all inliers were drawn)
-  @param err_fn pointer to the function used to compute a measure of error
-  between putative correspondences and a computed model
-  @param err_tol correspondences within this distance of a computed model are
-  considered as inliers
-  @param inliers if not NULL, output as an array of pointers to the final
-  set of inliers
-  @param n_in if not NULL and \a inliers is not NULL, output as the final
-  number of inliers
-
-  @return Returns a transformation matrix computed using RANSAC or NULL
-  on error or if an acceptable transform could not be computed.
-  */
-mv_mat_handle ransac_xform(struct feature* features, int n, int mtype,
-    ransac_xform_fn xform_fn, int m, double p_badxform,
-    ransac_err_fn err_fn, double err_tol,
-    struct feature*** inliers, int* n_in)
-
+class ransac_impl : public ransac_module
 {
-    struct feature** matched, ** sample, ** consensus, ** consensus_max = NULL;
-    struct ransac_data* rdata;
-    mv_point_d_t* pts, *mpts;
-    mv_mat_handle M = NULL;
-    double p, in_frac = RANSAC_INLIER_FRAC_EST;
-    int i, nm, in, in_min, in_max = 0, k = 0;
+public:
+    // RANSAC error tolerance in pixels 
+    static const int RANSAC_ERR_TOL = 3;
 
-    nm = get_matched_features(features, n, mtype, &matched);
-    if (nm < m)
-    {
-        fprintf(stderr, "Warning: not enough matches to compute xform, %s line %d\n", __FILE__, __LINE__);
-        goto end;
+    static const int RANSAC_XFORM_MIN_SIZE = 4;
+
+    // pessimistic estimate of fraction of inlers for RANSAC
+    const double RANSAC_INLIER_FRAC_EST = 0.25;
+
+    // estimate of the probability that a correspondence supports a bad model 
+    const double RANSAC_PROB_BAD_SUPP = 0.10;
+
+    const double RANSAC_BAD_XFORM = 0.01;
+
+    const double RANSAC_TOTAL_ERROR = 3.0;
+
+    // holds feature data relevant to ransac 
+    struct ransac_data {
+        feature* feat;
+        bool sampled;
+    };
+
+
+private:    
+    ransac_data* m_match_list[MAX_FEATURE_SIZE];
+    int m_match_num;
+    feature* m_consensus_buf[2][MAX_FEATURE_SIZE];    
+    feature** m_consensus;
+    int m_consensus_num;
+    int m_in_min;
+
+public:
+    ransac_impl() {
+        srand((int)time(NULL));
+        m_match_num = 0;    
+        m_consensus = NULL;
+        m_consensus_num = 0;
+
+        m_in_min = calc_min_inliers();
     }
 
-    //srandom(time(NULL));
-    srand(time(NULL));
+    virtual ~ransac_impl() {
 
-    in_min = calc_min_inliers(nm, m, RANSAC_PROB_BAD_SUPP, p_badxform);
-    p = pow(1.0 - pow(in_frac, m), k);
-    while (p > p_badxform)
-    {
-        sample = draw_ransac_sample(matched, nm, m);
-        extract_corresp_pts(sample, m, mtype, &pts, &mpts);
-        M = xform_fn(pts, mpts, m);
-        if (!M)
-            goto iteration_end;
-        in = find_consensus(matched, nm, mtype, M, err_fn, err_tol, &consensus);
-        if (in > in_max)
-        {
-            if (consensus_max)
-                free(consensus_max);
-            consensus_max = consensus;
-            in_max = in;
-            in_frac = (double)in_max / nm;
+    }
+
+    // Calculates a best-fit image transform from image feature correspondences using RANSAC.    
+    virtual int process(mv_features* features, Matrix3d& H) {
+        assert(features->size() <= MAX_FEATURE_SIZE);
+                
+        int ret = get_matched_features(features);
+        if (ret != 0) return -1;     
+
+        int in_min = m_in_min;
+        int in_max = 0;
+        int in, k = 0;
+        double in_frac = RANSAC_INLIER_FRAC_EST;
+        double p = pow(1.0 - pow(in_frac, RANSAC_XFORM_MIN_SIZE), k);
+
+        int flip_flop = 0;
+        feature* samples[RANSAC_XFORM_MIN_SIZE];        
+        feature** consensus;
+        feature** consensus_max = NULL;
+
+        while (p > RANSAC_BAD_XFORM) {
+            draw_ransac_sample(samples, RANSAC_XFORM_MIN_SIZE);            
+            lsq_homog(samples, RANSAC_XFORM_MIN_SIZE, H);
+            
+            consensus = m_consensus_buf[flip_flop];
+            in = find_consensus(H, consensus);
+            if (in > in_max) {                
+                consensus_max = consensus;
+                in_max = in;
+                in_frac = (double)in_max / m_match_num;
+                flip_flop = !flip_flop;
+            }            
+            
+            p = pow(1.0 - pow(in_frac, RANSAC_XFORM_MIN_SIZE), ++k);
         }
-        else
-            free(consensus);
-        mv_release_matrix(M);
 
-    iteration_end:
-        release_mem(pts, mpts, sample);
-        p = pow(1.0 - pow(in_frac, m), ++k);
+        // calculate final transform based on best consensus set 
+        if (in_max >= in_min) {            
+            lsq_homog(consensus_max, in_max, H);
+
+            consensus = m_consensus_buf[flip_flop];
+            in = find_consensus(H, consensus);
+            lsq_homog(consensus, in, H);
+
+            m_consensus = consensus;
+            m_consensus_num = in;
+        } 
+       
+        return 0;
     }
 
-    /* calculate final transform based on best consensus set */
-    if (in_max >= in_min)
+    virtual void export_inlier(feature*** inliers, int* n) {
+        *inliers = m_consensus;
+        *n = m_consensus_num;
+    }
+
+private:
+
+
+    // Calculates a least-squares planar homography from point correspondeces.
+    void lsq_homog(feature* features[], int n, Matrix3d& H)
     {
-        extract_corresp_pts(consensus_max, in_max, mtype, &pts, &mpts);
-        M = xform_fn(pts, mpts, in_max);
-        in = find_consensus(matched, nm, mtype, M, err_fn, err_tol, &consensus);
-        mv_release_matrix(M);
-        release_mem(pts, mpts, consensus_max);
-        extract_corresp_pts(consensus, in, mtype, &pts, &mpts);
-        M = xform_fn(pts, mpts, in);
-        if (inliers)
-        {
-            *inliers = consensus;
-            consensus = NULL;
+        // set up matrices so we can unstack homography into X; AX = B 
+        MatrixXd A(2 * n, 8);
+        MatrixXd B(2 * n, 1);
+        Matrix<double, 8, 1> X;
+        
+        A.setZero();
+        mv_point_d_t* pt;
+        mv_point_d_t* mpt;
+        
+        for (int i = 0; i < n; i++) {
+            pt = &features[i]->img_pt;            
+            mpt = &(get_match(features[i])->img_pt);
+
+            A(i, 0) = pt->x;
+            A(i + n, 3) = pt->x;
+            A(i, 1) = pt->y;
+            A(i + n, 4) = pt->y;
+            A(i, 2) = 1.0;
+            A(i + n, 5) = 1.0;
+            A(i, 6) = -pt->x * mpt->x;
+            A(i, 7) = -pt->y * mpt->x;
+            A(i + n, 6) = -pt->x * mpt->y;
+            A(i + n, 7) = -pt->y * mpt->y;
+
+            B(i, 0) = mpt->x;
+            B(i + n, 0) = mpt->y;
         }
-        if (n_in)
-            *n_in = in;
-        release_mem(pts, mpts, consensus);
-    }
-    else if (consensus_max)
-    {
-        if (inliers)
-            *inliers = NULL;
-        if (n_in)
-            *n_in = 0;
-        free(consensus_max);
+
+        JacobiSVD<MatrixXd> svd(A);
+        X = svd.solve(B);        
+
+        H <<X(0), X(1), X(2),
+            X(3), X(4), X(5),
+            X(6), X(7), 1.0;        
     }
 
-end:
-    for (i = 0; i < nm; i++)
-    {
-        rdata = feat_ransac_data(matched[i]);
-        matched[i]->feature_data = rdata->orig_feat_data;
-        free(rdata);
-    }
-    free(matched);
-    return M;
-}
 
-
-
-/*
-  Calculates a planar homography from point correspondeces using the direct
-  linear transform.  Intended for use as a ransac_xform_fn.
-
-  @param pts array of points
-  @param mpts array of corresponding points; each pts[i], i=0..n-1,
-  corresponds to mpts[i]
-  @param n number of points in both pts and mpts; must be at least 4
-
-  @return Returns the 3x3 planar homography matrix that transforms points
-  in pts to their corresponding points in mpts or NULL if fewer than 4
-  correspondences were provided
-  */
-//mv_mat_handle* dlt_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
-//{
-//    mv_mat_handle* H, *A, *VT, *D, h, v9;
-//    double _h[9];
-//    int i;
-//
-//    if (n < 4)
-//        return NULL;
-//
-//    /* set up matrices so we can unstack homography into h; Ah = 0 */
-//    A = mv_create_matrix(2 * n, 9, MV_64FC1);
-//    mv_matrix_zero(A);
-//    for (i = 0; i < n; i++)
-//    {
-//        mv_matrix_set(A, 2 * i, 3, -pts[i].x);
-//        mv_matrix_set(A, 2 * i, 4, -pts[i].y);
-//        mv_matrix_set(A, 2 * i, 5, -1.0);
-//        mv_matrix_set(A, 2 * i, 6, mpts[i].y * pts[i].x);
-//        mv_matrix_set(A, 2 * i, 7, mpts[i].y * pts[i].y);
-//        mv_matrix_set(A, 2 * i, 8, mpts[i].y);
-//        mv_matrix_set(A, 2 * i + 1, 0, pts[i].x);
-//        mv_matrix_set(A, 2 * i + 1, 1, pts[i].y);
-//        mv_matrix_set(A, 2 * i + 1, 2, 1.0);
-//        mv_matrix_set(A, 2 * i + 1, 6, -mpts[i].x * pts[i].x);
-//        mv_matrix_set(A, 2 * i + 1, 7, -mpts[i].x * pts[i].y);
-//        mv_matrix_set(A, 2 * i + 1, 8, -mpts[i].x);
-//    }
-//    D = mv_create_matrix(9, 9, MV_64FC1);
-//    VT = mv_create_matrix(9, 9, MV_64FC1);
-//    mv_svd(A, D, NULL, VT, MV_SVD_MODIFY_A + MV_SVD_V_T);
-//    v9 = mv_mat_handle(1, 9, MV_64FC1, NULL);
-//    mv_get_row(VT, &v9, 8);
-//    h = mv_mat_handle(1, 9, MV_64FC1, _h);
-//    mv_copy(&v9, &h, NULL);
-//    h = mv_mat_handle(3, 3, MV_64FC1, _h);
-//    H = mv_create_matrix(3, 3, MV_64FC1);
-//    mv_convert(&h, H);
-//
-//    mv_release_matrix(&A);
-//    mv_release_matrix(&D);
-//    mv_release_matrix(&VT);
-//    return H;
-//}
-
-
-
-
-/*
-  Calculates a least-squares planar homography from point correspondeces.
-
-  @param pts array of points
-  @param mpts array of corresponding points; each pts[i], i=1..n, corresponds
-  to mpts[i]
-  @param n number of points in both pts and mpts; must be at least 4
-
-  @return Returns the 3 x 3 least-squares planar homography matrix that
-  transforms points in pts to their corresponding points in mpts or NULL if
-  fewer than 4 correspondences were provided
-  */
-mv_mat_handle lsq_homog(mv_point_d_t* pts, mv_point_d_t* mpts, int n)
-{
-    if (n < 4) {
-        WRITE_WARN_LOG("too few points in lsq_homog()");
-        return NULL;
-    }
-
-    /* set up matrices so we can unstack homography into X; AX = B */
-    mv_mat_handle A = mv_create_matrix(2 * n, 8);
-    mv_mat_handle B = mv_create_matrix(2 * n, 1);    
-    mv_vec_handle X = mv_create_vector(8);
-    mv_mat_handle H = mv_create_matrix(3, 3);
-
-    mv_matrix_zero(A);
-
-    for (int i = 0; i < n; i++) {
-        mv_matrix_set(A, i, 0, pts[i].x);
-        mv_matrix_set(A, i + n, 3, pts[i].x);
-        mv_matrix_set(A, i, 1, pts[i].y);
-        mv_matrix_set(A, i + n, 4, pts[i].y);
-        mv_matrix_set(A, i, 2, 1.0);
-        mv_matrix_set(A, i + n, 5, 1.0);
-        mv_matrix_set(A, i, 6, -pts[i].x * mpts[i].x);
-        mv_matrix_set(A, i, 7, -pts[i].y * mpts[i].x);
-        mv_matrix_set(A, i + n, 6, -pts[i].x * mpts[i].y);
-        mv_matrix_set(A, i + n, 7, -pts[i].y * mpts[i].y);
-        mv_matrix_set(B, i, 0, mpts[i].x);
-        mv_matrix_set(B, i + n, 0, mpts[i].y);
-    }
-    mv_solve(A, B, X);
-
-    //x[8] = 1.0;
-    //mv_mat_handle* XX = mv_create_matrix(3, 3, MV_64FC1);
-    //X = mv_mat_handle(3, 3, MV_64FC1, x);
-    //mv_convert(&X, H);
-
-    mv_matrix_set(H, 0, 0, mv_vector_get(X, 0));
-    mv_matrix_set(H, 0, 1, mv_vector_get(X, 1));
-    mv_matrix_set(H, 0, 2, mv_vector_get(X, 2));
-    mv_matrix_set(H, 1, 0, mv_vector_get(X, 3));
-    mv_matrix_set(H, 1, 1, mv_vector_get(X, 4));
-    mv_matrix_set(H, 1, 2, mv_vector_get(X, 5));
-    mv_matrix_set(H, 2, 0, mv_vector_get(X, 6));
-    mv_matrix_set(H, 2, 1, mv_vector_get(X, 7));
-    mv_matrix_set(H, 2, 2, 1.0);
     
+    // Calculates the transfer error between a point and its correspondence for
+    // a given homography, i.e. for a point x, it's correspondence x', and
+    // homography H, computes d(x', Hx)^2.
+    double homog_xfer_err(mv_point_d_t pt, mv_point_d_t mpt, const Matrix3d& H) {
+        
+        // Performs a perspective transformation on a single point.  That is, for a
+        // point (x, y) and a 3 x 3 matrix T this function returns the point (u, v), where
+        //  [x' y' w']^T = T * [x y 1]^T,       
+        //      and
+        //  (u, v) = (x'/w', y'/w').
+        //  Note that affine transforms are a subset of perspective transforms.
+        
+        Vector3d XY;
+        XY << pt.x, pt.y, 1.0;
 
-    mv_release_matrix(A);
-    mv_release_matrix(B);
-    return H;
-}
+        Vector3d UY;
+        UY = H * XY;
 
+        mv_point_d_t xpt(UY(0) / UY(2), UY(1) / UY(2));
 
-
-/*
-  Calculates the transfer error between a point and its correspondence for
-  a given homography, i.e. for a point x, it's correspondence x', and
-  homography H, computes d(x', Hx)^2.
-
-  @param pt a point
-  @param mpt pt's correspondence
-  @param H a homography matrix
-
-  @return Returns the transfer error between pt and mpt given H
-  */
-double homog_xfer_err(mv_point_d_t pt, mv_point_d_t mpt, mv_mat_handle H)
-{
-    mv_point_d_t xpt = persp_xform_pt(pt, H);
-
-    return sqrt(dist_sq_2D(xpt, mpt));
-}
-
-
-
-/*
-  Performs a perspective transformation on a single point.  That is, for a
-  point (x, y) and a 3 x 3 matrix T this function returns the point
-  (u, v), where
-
-  [x' y' w']^T = T * [x y 1]^T,
-
-  and
-
-  (u, v) = (x'/w', y'/w').
-
-  Note that affine transforms are a subset of perspective transforms.
-
-  @param pt a 2D point
-  @param T a perspective transformation matrix
-
-  @return Returns the point (u, v) as above.
-  */
-mv_point_d_t persp_xform_pt(mv_point_d_t pt, mv_mat_handle T)
-{
-
-    mv_mat_handle XY = mv_create_matrix(3, 1);
-    mv_matrix_set(XY, 0, 0, pt.x);
-    mv_matrix_set(XY, 1, 0, pt.y);
-    mv_matrix_set(XY, 2, 0, 1.0);
-
-    mv_mat_handle UV = mv_create_matrix(3, 1);
-    mv_matrix_zero(UV);
-
-    mv_matrix_mul(T, XY, UV);
-
-    double uv0 = mv_matrix_get(UV, 0, 0);
-    double uv1 = mv_matrix_get(UV, 1, 0);
-    double uv2 = mv_matrix_get(UV, 2, 0);
-    mv_point_d_t rslt = mv_point_d_t(uv0 / uv2, uv1 / uv2);
-
-    return rslt;
-}
-
-
-/************************ Local funciton definitions *************************/
-
-/*
-  Returns a feature's match according to a specified match type
-
-  @param feat feature
-  @param mtype match type, one of FEATURE_FWD_MATCH, FEATURE_BCK_MATCH, or
-  FEATURE_MDL_MATCH
-
-  @return Returns feat's match corresponding to mtype or NULL for bad mtype
-  */
-static inline struct feature* get_match(struct feature* feat, int mtype)
-{
-    if (mtype == FEATURE_MDL_MATCH)
-        return feat->mdl_match;
-    if (mtype == FEATURE_BCK_MATCH)
-        return feat->bck_match;
-    if (mtype == FEATURE_FWD_MATCH)
-        return feat->fwd_match;
-    return NULL;
-}
-
-
-
-/*
-  Finds all features with a match of a specified type and stores pointers
-  to them in an array.  Additionally initializes each matched feature's
-  feature_data field with a ransac_data structure.
-
-  @param features array of features
-  @param n number of features in features
-  @param mtype match type, one of FEATURE_{FWD,BCK,MDL}_MATCH
-  @param matched output as an array of pointers to features with a match of
-  the specified type
-
-  @return Returns the number of features output in matched.
-  */
-static int get_matched_features(struct feature* features, int n, int mtype, struct feature*** matched)
-{
-    struct feature** _matched;
-    struct ransac_data* rdata;
-    int i, m = 0;
-
-    _matched = (struct feature**)calloc(n, sizeof(struct feature*));
-    for (i = 0; i < n; i++)
-    if (get_match(features + i, mtype))
-    {
-        rdata = (struct ransac_data*)malloc(sizeof(struct ransac_data));
-        memset(rdata, 0, sizeof(struct ransac_data));
-        rdata->orig_feat_data = features[i].feature_data;
-        _matched[m] = features + i;
-        _matched[m]->feature_data = rdata;
-        m++;
-    }
-    *matched = _matched;
-    return m;
-}
-
-
-
-/*
-  Calculates the minimum number of inliers as a function of the number of
-  putative correspondences.  Based on equation (7) in
-
-  Chum, O. and Matas, J.  Matching with PROSAC -- Progressive Sample Consensus.
-  In <EM>Conference on Computer Vision and Pattern Recognition (CVPR)</EM>,
-  (2005), pp. 220--226.
-
-  @param n number of putative correspondences
-  @param m min number of correspondences to compute the model in question
-  @param p_badsupp prob. that a bad model is supported by a correspondence
-  @param p_badxform desired prob. that the final transformation returned is bad
-
-  @return Returns the minimum number of inliers required to guarantee, based
-  on p_badsupp, that the probability that the final transformation returned
-  by RANSAC is less than p_badxform
-  */
-static int calc_min_inliers(int n, int m, double p_badsupp, double p_badxform)
-{
-    double pi, sum;
-    int i, j;
-
-    for (j = m + 1; j <= n; j++)
-    {
-        sum = 0;
-        for (i = j; i <= n; i++)
-        {
-            pi = (i - m) * log(p_badsupp) + (n - i + m) * log(1.0 - p_badsupp) +
-                log_factorial(n - m) - log_factorial(i - m) -
-                log_factorial(n - i);
-            /*
-             * Last three terms above are equivalent to log( n-m choose i-m )
-             */
-            sum += exp(pi);
-        }
-        if (sum < p_badxform)
-            break;
-    }
-    return j;
-}
-
-
-
-/*
-  Calculates the natural log of the factorial of a number
-
-  @param n number
-
-  @return Returns log( n! )
-  */
-static inline double log_factorial(int n)
-{
-    double f = 0;
-    int i;
-
-    for (i = 1; i <= n; i++)
-        f += log((double)i);
-
-    return f;
-}
-
-
-/*
-  Draws a RANSAC sample from a set of features.
-
-  @param features array of pointers to features from which to sample
-  @param n number of features in features
-  @param m size of the sample
-
-  @return Returns an array of pointers to the sampled features; the sampled
-  field of each sampled feature's ransac_data is set to 1
-  */
-static struct feature** draw_ransac_sample(struct feature** features, int n,
-    int m)
-{
-    struct feature** sample, *feat;
-    struct ransac_data* rdata;
-    int i, x;
-
-    for (i = 0; i < n; i++)
-    {
-        rdata = feat_ransac_data(features[i]);
-        rdata->sampled = 0;
+        return sqrt(dist_sq_2D(xpt, mpt));
     }
 
-    sample = (struct feature**)calloc(m, sizeof(struct feature*));
-    for (i = 0; i < m; i++)
-    {
-        do
-        {
-            //x = random() % n;
-            x = rand() % n;
-            feat = features[x];
-            rdata = feat_ransac_data(feat);
-        } while (rdata->sampled);
-        sample[i] = feat;
-        rdata->sampled = 1;
+
+    // Returns a feature's match according to a specified match type
+    inline struct feature* get_match(struct feature* feat) {
+        return feat->fwd_match;        
     }
 
-    return sample;
-}
 
+    // Finds all features with a match of a specified type and stores pointers
+    // to them in an array.  Additionally initializes each matched feature's
+    // feature_data field with a ransac_data structure.
+    int get_matched_features(mv_features* features) {
+        int m = 0;
+        int n = features->size();
+        for (int i = 0; i < n; i++) {
+            feature* matched = get_match(features->at(i));
+            if (matched == NULL)
+                continue;
 
-
-/*
-  Extrancs raw point correspondence locations from a set of features
-
-  @param features array of features from which to extract points and match
-  points; each of these is assumed to have a match of type mtype
-  @param n number of features
-  @param mtype match type; if FEATURE_MDL_MATCH correspondences are assumed
-  to be between each feature's img_pt field and it's match's mdl_pt field,
-  otherwise, correspondences are assumed to be between img_pt and img_pt
-  @param pts output as an array of raw point locations from features
-  @param mpts output as an array of raw point locations from features' matches
-  */
-static void extract_corresp_pts(struct feature** features, int n, int mtype,
-    mv_point_d_t** pts, mv_point_d_t** mpts)
-{
-    struct feature* match;
-    mv_point_d_t* _pts, *_mpts;
-    int i;
-
-    _pts = (mv_point_d_t*)calloc(n, sizeof(mv_point_d_t));
-    _mpts = (mv_point_d_t*)calloc(n, sizeof(mv_point_d_t));
-
-    if (mtype == FEATURE_MDL_MATCH)
-    for (i = 0; i < n; i++)
-    {
-        match = get_match(features[i], mtype);
-        if (!match) {
-            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
-            return;
+            m_match_list[m]->feat = features->at(i);
+            m_match_list[m]->sampled = false;
+            m++;
         }
 
-        _pts[i] = features[i]->img_pt;
-        _mpts[i] = match->mdl_pt;
-    }
+        m_match_num = m;       
 
-    else
-    for (i = 0; i < n; i++)
-    {
-        match = get_match(features[i], mtype);
-        if (!match) {
-            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
-            return;
-        }
-                        
-        _pts[i] = features[i]->img_pt;
-        _mpts[i] = match->img_pt;
-    }
-
-    *pts = _pts;
-    *mpts = _mpts;
-}
-
-
-
-/*
-  For a given model and error function, finds a consensus from a set of
-  feature correspondences.
-
-  @param features set of pointers to features; every feature is assumed to
-  have a match of type mtype
-  @param n number of features in features
-  @param mtype determines the match field of each feature against which to
-  measure error; if this is FEATURE_MDL_MATCH, correspondences are assumed
-  to be between the feature's img_pt field and the match's mdl_pt field;
-  otherwise matches are assumed to be between img_pt and img_pt
-  @param M model for which a consensus set is being found
-  @param err_fn error function used to measure distance from M
-  @param err_tol correspondences within this distance of M are added to the
-  consensus set
-  @param consensus output as an array of pointers to features in the
-  consensus set
-
-  @return Returns the number of points in the consensus set
-  */
-static int find_consensus(struct feature** features, int n, int mtype,
-    mv_mat_handle M, ransac_err_fn err_fn, double err_tol,
-struct feature*** consensus)
-{
-    struct feature** _consensus;
-    struct feature* match;
-    mv_point_d_t pt, mpt;
-    double err;
-    int i, in = 0;
-
-    _consensus = (struct feature**)calloc(n, sizeof(struct feature*));
-
-    if (mtype == FEATURE_MDL_MATCH)
-    for (i = 0; i < n; i++)
-    {
-        match = get_match(features[i], mtype);
-        if (!match) {
-            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
+        if (m < RANSAC_XFORM_MIN_SIZE) {
+            WRITE_ERROR_LOG("not enough matches to compute xform.");
             return -1;
         }
-            
-        pt = features[i]->img_pt;
-        mpt = match->mdl_pt;
-        err = err_fn(pt, mpt, M);
-        if (err <= err_tol)
-            _consensus[in++] = features[i];
+
+        return 0;
     }
 
-    else
-    for (i = 0; i < n; i++)
-    {
-        match = get_match(features[i], mtype);        
-        if (!match) {
-            WRITE_ERROR_LOG("feature does not have match of type %d", mtype);
-            return -1;
+
+
+    
+    // Calculates the minimum number of inliers as a function of the number of putative correspondences.      
+    int calc_min_inliers() {
+        int num = m_match_num;
+        double p_badsupp = RANSAC_PROB_BAD_SUPP;
+        double p_badxform = RANSAC_BAD_XFORM;
+        int m = RANSAC_XFORM_MIN_SIZE;
+
+        double sum;        
+        int n = 0;        
+
+        for (int n = m + 1; n <= num; n++) {
+            sum = 0;
+            for (int i = n; i <= num; i++) {
+                double pi = (i - m) * log(p_badsupp) + (num - i + m) * log(1.0 - p_badsupp) +
+                    log_factorial(num - m) - log_factorial(i - m) - log_factorial(num - i);
+                
+                // Last three terms above are equivalent to log( n-m choose i-m )                
+                sum += exp(pi);
+            }
+
+            if (sum < p_badxform)
+                break;
         }
-            
-        pt = features[i]->img_pt;
-        mpt = match->img_pt;
-        err = err_fn(pt, mpt, M);
-        if (err <= err_tol)
-            _consensus[in++] = features[i];
+        return n;
     }
-    *consensus = _consensus;
-    return in;
-}
 
 
+    // Calculates the natural log of the factorial of a number
+    inline double log_factorial(int n) {
+        double f = 0;
+        int i;
 
-/*
-  Releases memory and reduces code size above
+        for (i = 1; i <= n; i++)
+            f += log((double)i);
 
-  @param pts1 an array of points
-  @param pts2 an array of points
-  @param features an array of pointers to features; can be NULL
-  */
-static inline void release_mem(mv_point_d_t* pts1, mv_point_d_t* pts2,
-struct feature** features)
+        return f;
+    }
+
+    
+    // Draws a RANSAC sample from a set of features.
+    void draw_ransac_sample(feature* samples[], int n) {        
+        ransac_data* rdata;
+                
+        for (int i = 0; i < m_match_num; i++) {
+            do {     
+                rdata = m_match_list[rand() % n];
+                if (!rdata->sampled) break;                                
+            } while (true);
+
+            samples[i] = rdata->feat;
+            rdata->sampled = true;
+        }        
+    }
+
+    
+    // For a given model and error function, finds a consensus from a set of feature correspondences.
+    int find_consensus(const Matrix3d& M, feature* consensus[]) {
+        feature* feat;
+        feature* match;
+        mv_point_d_t pt, mpt;
+        
+        int n = 0; 
+        for (int i = 0; i < m_match_num; i++) {
+            feat = m_match_list[i]->feat;
+            match = get_match(feat);
+
+            pt = feat->img_pt;
+            mpt = match->img_pt;            
+            if (homog_xfer_err(pt, mpt, M) <= RANSAC_TOTAL_ERROR)
+                consensus[n++] = feat;
+        }
+        return n;
+    }
+
+};
+
+
+ransac_module* ransac_module::instance()
 {
-    free(pts1);
-    free(pts2);
-    if (features)
-        free(features);
+    ransac_impl inst;
+    return &inst;
 }
+
