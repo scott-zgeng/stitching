@@ -334,31 +334,6 @@ void mv_convert_gray(const mv_image_t* src, mv_image_t* dst)
 
 
 
-void mv_warp_perspective(const mv_image_t* src, mv_image_t* dst, void* map_matrix, int flags, mv_scalar_t fillval)
-{
-
-}
-
-
-
-
-void mv_set_image_roi(mv_image_t* image, mv_rect_t rect)
-{
-
-}
-
-
-void mv_reset_image_roi(mv_image_t* image)
-{
-
-}
-
-
-void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst)
-{
-
-}
-
 
 /** dst(mask) = src1(mask) - src2(mask) */
 void mv_sub(const mv_image_t* src1, const mv_image_t* src2, mv_image_t* dst)
@@ -518,3 +493,64 @@ void mv_box_blur(const mv_image_t* src, mv_image_t* dst, double sigma)
     mv_free(p1);
 }
 
+
+void mv_perspective(const mv_image_t* src, mv_image_t* dst, const Matrix3d& H)
+{
+    Vector3d V1;
+    Vector3d V2;
+
+    int new_x;
+    int new_y;
+
+    mv_byte* sdata = src->imageData;
+    mv_byte* ddata = dst->imageData;
+
+    int swidth = src->width;
+    int dwidth = dst->width;
+    int dheight = dst->height;
+
+    memset(ddata, 0, dst->imageSize);
+
+
+    for (int y = 0; y < src->height; y++) {
+        for (int x = 0; x < src->width; x++) {
+            V2 << x, y, 1;
+            V1 = H * V2;
+            new_x = mv_round(V1[0] / V1[2]);
+            new_y = mv_round(V1[1] / V1[2]);
+            //new_x = x;
+            //new_y = y;
+
+            if (new_x < 0 || new_x >= dwidth) continue;
+            if (new_y < 0 || new_y >= dheight) continue;
+
+            memcpy(ddata + new_y * dst->widthStep + new_x * 3, sdata + y * src->widthStep + x * 3, 3);
+            //*(ddata + new_y * dwidth + new_x) = *(sdata + y * dwidth + x);
+        }
+    }
+}
+
+
+
+
+
+void mv_set_image_roi(mv_image_t* image, mv_rect_t rect)
+{
+
+}
+
+
+void mv_reset_image_roi(mv_image_t* image)
+{
+
+}
+
+
+void mv_add_weighted(const mv_image_t* src1, double alpha, const mv_image_t* src2, double beta, double gamma, mv_image_t* dst)
+{
+    for (int y = 0; y < src1->height; y++) {
+        for (int x = 0; x < src1->width; x++) {
+            memcpy(dst->imageData + y * dst->widthStep + x * 3, src1->imageData + y * src1->widthStep + x * 3, 3);            
+        }
+    }    
+}

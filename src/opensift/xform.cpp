@@ -55,21 +55,18 @@ public:
 
 
 private:    
-    ransac_data* m_match_list[MAX_FEATURE_SIZE];
+    ransac_data m_match_list[MAX_FEATURE_SIZE];
     int m_match_num;
     feature* m_consensus_buf[2][MAX_FEATURE_SIZE];    
     feature** m_consensus;
     int m_consensus_num;
-    int m_in_min;
-
+    
 public:
     ransac_impl() {
         srand((int)time(NULL));
         m_match_num = 0;    
         m_consensus = NULL;
         m_consensus_num = 0;
-
-        m_in_min = calc_min_inliers();
     }
 
     virtual ~ransac_impl() {
@@ -77,13 +74,14 @@ public:
     }
 
     // Calculates a best-fit image transform from image feature correspondences using RANSAC.    
-    virtual int process(mv_features* features, Matrix3d& H) {
-        assert(features->size() <= MAX_FEATURE_SIZE);
-                
-        int ret = get_matched_features(features);
+    virtual int process(feature* features[], int n, Matrix3d& H) {
+
+        assert(n <= MAX_FEATURE_SIZE);
+        
+        int ret = get_matched_features(features, n);
         if (ret != 0) return -1;     
 
-        int in_min = m_in_min;
+        int in_min = calc_min_inliers(n);
         int in_max = 0;
         int in, k = 0;
         double in_frac = RANSAC_INLIER_FRAC_EST;
@@ -120,7 +118,11 @@ public:
 
             m_consensus = consensus;
             m_consensus_num = in;
-        } 
+        }
+        else if (consensus_max) {
+            m_consensus = NULL;
+            m_consensus_num = 0;
+        }
        
         return 0;
     }
@@ -137,34 +139,34 @@ private:
     void lsq_homog(feature* features[], int n, Matrix3d& H)
     {
         // set up matrices so we can unstack homography into X; AX = B 
-        MatrixXd A(2 * n, 8);
+        MatrixXd A(2 * n, 8); 
         MatrixXd B(2 * n, 1);
         Matrix<double, 8, 1> X;
         
         A.setZero();
-        mv_point_d_t* pt;
-        mv_point_d_t* mpt;
+        mv_point_d_t pt;
+        mv_point_d_t mpt;
         
         for (int i = 0; i < n; i++) {
-            pt = &features[i]->img_pt;            
-            mpt = &(get_match(features[i])->img_pt);
+            pt = features[i]->img_pt;            
+            mpt = get_match(features[i])->img_pt;
 
-            A(i, 0) = pt->x;
-            A(i + n, 3) = pt->x;
-            A(i, 1) = pt->y;
-            A(i + n, 4) = pt->y;
+            A(i, 0) = pt.x;
+            A(i + n, 3) = pt.x;
+            A(i, 1) = pt.y;
+            A(i + n, 4) = pt.y;
             A(i, 2) = 1.0;
             A(i + n, 5) = 1.0;
-            A(i, 6) = -pt->x * mpt->x;
-            A(i, 7) = -pt->y * mpt->x;
-            A(i + n, 6) = -pt->x * mpt->y;
-            A(i + n, 7) = -pt->y * mpt->y;
+            A(i, 6) = -pt.x * mpt.x;
+            A(i, 7) = -pt.y * mpt.x;
+            A(i + n, 6) = -pt.x * mpt.y;
+            A(i + n, 7) = -pt.y * mpt.y;
 
-            B(i, 0) = mpt->x;
-            B(i + n, 0) = mpt->y;
+            B(i, 0) = mpt.x;
+            B(i + n, 0) = mpt.y;
         }
 
-        JacobiSVD<MatrixXd> svd(A);
+        JacobiSVD<MatrixXd> svd(A, ComputeThinU | ComputeThinV);
         X = svd.solve(B);        
 
         H <<X(0), X(1), X(2),
@@ -177,7 +179,7 @@ private:
     // Calculates the transfer error between a point and its correspondence for
     // a given homography, i.e. for a point x, it's correspondence x', and
     // homography H, computes d(x', Hx)^2.
-    double homog_xfer_err(mv_point_d_t pt, mv_point_d_t mpt, const Matrix3d& H) {
+    double homog_xfer_err(const mv_point_d_t& pt, const mv_point_d_t& mpt, const Matrix3d& H) {
         
         // Performs a perspective transformation on a single point.  That is, for a
         // point (x, y) and a 3 x 3 matrix T this function returns the point (u, v), where
@@ -207,16 +209,17 @@ private:
     // Finds all features with a match of a specified type and stores pointers
     // to them in an array.  Additionally initializes each matched feature's
     // feature_data field with a ransac_data structure.
-    int get_matched_features(mv_features* features) {
+    int get_matched_features(feature* features[], int n) {
         int m = 0;
-        int n = features->size();
+        
         for (int i = 0; i < n; i++) {
-            feature* matched = get_match(features->at(i));
+            feature* matched = get_match(features[i]);
             if (matched == NULL)
                 continue;
 
-            m_match_list[m]->feat = features->at(i);
-            m_match_list[m]->sampled = false;
+            //WRITE_INFO_LOG("matched feature %d scl = %f", i, features[i]->scl);
+            m_match_list[m].feat = features[i];
+            m_match_list[m].sampled = false;
             m++;
         }
 
@@ -230,22 +233,20 @@ private:
         return 0;
     }
 
-
-
     
     // Calculates the minimum number of inliers as a function of the number of putative correspondences.      
-    int calc_min_inliers() {
-        int num = m_match_num;
+    int calc_min_inliers(int num) {
+        
         double p_badsupp = RANSAC_PROB_BAD_SUPP;
         double p_badxform = RANSAC_BAD_XFORM;
         int m = RANSAC_XFORM_MIN_SIZE;
 
         double sum;        
-        int n = 0;        
+        int j;        
 
-        for (int n = m + 1; n <= num; n++) {
+        for (j = m + 1; j <= num; j++) {
             sum = 0;
-            for (int i = n; i <= num; i++) {
+            for (int i = j; i <= num; i++) {
                 double pi = (i - m) * log(p_badsupp) + (num - i + m) * log(1.0 - p_badsupp) +
                     log_factorial(num - m) - log_factorial(i - m) - log_factorial(num - i);
                 
@@ -256,7 +257,7 @@ private:
             if (sum < p_badxform)
                 break;
         }
-        return n;
+        return j;
     }
 
 
@@ -275,10 +276,14 @@ private:
     // Draws a RANSAC sample from a set of features.
     void draw_ransac_sample(feature* samples[], int n) {        
         ransac_data* rdata;
-                
+
         for (int i = 0; i < m_match_num; i++) {
+            m_match_list[i].sampled = false;
+        }
+
+        for (int i = 0; i < n; i++) {
             do {     
-                rdata = m_match_list[rand() % n];
+                rdata = m_match_list + (rand() % m_match_num);
                 if (!rdata->sampled) break;                                
             } while (true);
 
@@ -296,12 +301,13 @@ private:
         
         int n = 0; 
         for (int i = 0; i < m_match_num; i++) {
-            feat = m_match_list[i]->feat;
+            feat = m_match_list[i].feat;
             match = get_match(feat);
 
-            pt = feat->img_pt;
-            mpt = match->img_pt;            
-            if (homog_xfer_err(pt, mpt, M) <= RANSAC_TOTAL_ERROR)
+            assert(feat && match);
+            //WRITE_INFO_LOG("find_consensus FEAT %f, match %f", feat->scl, match->scl);
+        
+            if (homog_xfer_err(feat->img_pt, match->img_pt, M) <= RANSAC_TOTAL_ERROR)
                 consensus[n++] = feat;
         }
         return n;
@@ -312,7 +318,10 @@ private:
 
 ransac_module* ransac_module::instance()
 {
-    ransac_impl inst;
-    return &inst;
+    static ransac_impl* inst = NULL; 
+    if (inst == NULL) {
+        inst = new ransac_impl();
+    }
+    return inst;    
 }
 

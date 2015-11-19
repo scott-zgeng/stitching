@@ -31,7 +31,7 @@ struct kd_node
     int ki;                      /**< partition key index */
     double kv;                   /**< partition key value */
     int leaf;                    /**< 1 if node is a leaf, 0 otherwise */
-    struct feature* features;    /**< features at this node */
+    struct feature** features;   /**< features at this node */
     int n;                       /**< number of features */
     struct kd_node* kd_left;     /**< left child */
     struct kd_node* kd_right;    /**< right child */
@@ -53,7 +53,7 @@ struct kd_node
    */
 
 #include "sift.h"
-extern struct kd_node* kdtree_build(struct feature* features, int n);
+extern struct kd_node* kdtree_build(feature* features[], int n);
 
 
 
@@ -97,10 +97,10 @@ extern int kdtree_bbf_knn(struct kd_node* kd_root, struct feature* feat,
    (in case \a k neighbors could not be found before examining
    \a max_nn_checks keypoint entries).
    */
-extern int kdtree_bbf_spatial_knn(struct kd_node* kd_root, struct feature* feat, int k,
-        struct feature*** nbrs, int max_nn_chks,
-        mv_rect_t rect, int model);
-
+//extern int kdtree_bbf_spatial_knn(struct kd_node* kd_root, struct feature* feat, int k,
+//        struct feature*** nbrs, int max_nn_chks,
+//        mv_rect_t rect, int model);
+//
 
 /**
    De-allocates memory held by a kd tree

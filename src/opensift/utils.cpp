@@ -104,6 +104,13 @@ void write_log(int level, const char* file, int line, const char* format, ...)
 
     printf(log);
     printf("\n");
+
+    //const char* logfile = "./test.log";
+    //FILE* fb = fopen(logfile, "a+");
+    //fprintf(fb, log);
+    //fprintf(fb, "\n");
+    //fflush(fb);
+    //fclose(fb);
 }
 
 
@@ -274,7 +281,7 @@ int array_double(void** array, int n, int size)
   @param p1 a point
   @param p2 another point
   */
-double dist_sq_2D(mv_point_d_t p1, mv_point_d_t p2)
+double dist_sq_2D(const mv_point_d_t& p1, const mv_point_d_t& p2)
 {
     double x_diff = p1.x - p2.x;
     double y_diff = p1.y - p2.y;

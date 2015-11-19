@@ -20,12 +20,10 @@ struct feature;
 
 class ransac_module
 {
-
-public:
-    virtual ~ransac_module() = 0;
-    virtual int process(mv_features* features, Matrix3d& H) = 0;
+public:    
+    virtual int process(feature* features[], int n, Matrix3d& H) = 0;
     virtual void export_inlier(feature*** inliers, int* n) = 0;
-
+public:
     static ransac_module* instance();
 };
 

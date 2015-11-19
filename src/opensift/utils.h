@@ -206,7 +206,7 @@ int array_double(void** array, int n, int size);
    @param p1 a point
    @param p2 another point
    */
-double dist_sq_2D(mv_point_d_t p1, mv_point_d_t p2);
+double dist_sq_2D(const mv_point_d_t& p1, const mv_point_d_t& p2);
 
 
 /**

@@ -31,6 +31,7 @@
 #include <Eigen/Dense>
 using namespace Eigen;
 
+#define USE_CV_DEBUG
 
 #ifdef USE_CV_DEBUG
 #include "cv.h"
@@ -135,13 +136,14 @@ public:
     }
 
     virtual ~sift_runtime() {
+
     }
 
 
     // Finda SIFT features in an image using user-specified parameter values. 
     //   All detected features are stored in the array pointed to by \a feat.
-    virtual int process(mv_image_t* img, mv_features* features) {
-        assert(img != NULL || features != NULL);
+    virtual int process(mv_image_t* img) {
+        assert(img != NULL);
 
         // build scale space pyramid; smallest dimension of top level is ~4 pixels 
         mv_image_t* base = create_init_img(img, SIFT_IMG_DBL);
@@ -162,9 +164,7 @@ public:
             adjust_for_img_dbl();
 
         calc_feature_oris();
-        compute_descriptors();
-
-        export_features(features);
+        compute_descriptors();        
 
         mv_release_image(&base);
         release_pyramid();
@@ -172,6 +172,23 @@ public:
         return 0;
     }
 
+
+    virtual int export_features(feature* features[], int n) { 
+        assert(m_pool_used <= n);
+
+        for (int i = 0; i < m_pool_used; i++) {
+            features[i] = m_pool + i;
+        }
+
+       
+        qsort(features, m_pool_used, sizeof(feature*), feature_cmp);
+
+        for (int i = 0; i < m_pool_used; i++) {
+            WRITE_INFO_LOG("%d: scl = %f", i, features[i]->scl);
+        }
+
+        return m_pool_used;
+    }
 
 private:
 
@@ -281,7 +298,7 @@ private:
                 dog_pyramid(o, i) = dog;
                 mv_sub(prev, curr, dog);
 
-                WRITE_INFO_LOG("SUB o = %d i = %d", o, i);
+                //WRITE_INFO_LOG("SUB o = %d i = %d", o, i);
                 //show_temp_image(dog);
             }
         }
@@ -306,7 +323,6 @@ private:
     // Detects features at extrema in DoG scale space.  Bad features are discarded
     // based on contrast and ratio of principal curvatures.
     int scale_space_extrema() {
-
         int octvs = m_octvs;
 
         feature* feat;
@@ -339,7 +355,7 @@ private:
                         ddata = &feat->ddata;
                         mv_image_t* temp = dog_pyramid(ddata->octv, ddata->intvl);
                         if (is_too_edge_like(temp, ddata->r, ddata->c)) {
-                            WRITE_INFO_LOG("is_too_edge_like o=%d, i=%d, r=%d, c=%d", o, i, r, c);
+                            //WRITE_INFO_LOG("edge like and rollback, o=%d, i=%d, r=%d, c=%d", o, i, r, c);
                             rollback_new_feature();
                         }
                     }
@@ -452,6 +468,7 @@ private:
         ddata->intvl = intvl;
         ddata->subintvl = xi;
 
+        //WRITE_INFO_LOG("[%d] new feature, r = %d, c = %d, octv = %d intvl = %d xi = %f",  m_pool_used, r, c, octv, intvl, xi);
         return feat;
     }
 
@@ -494,8 +511,8 @@ private:
         m_pool_used++;
 
         memset(feat, 0, sizeof(struct feature));
-        feat->type = FEATURE_LOWE;
-        feat = (struct feature*)malloc(sizeof(struct feature));
+        //feat->type = FEATURE_LOWE;
+        //feat = (struct feature*)malloc(sizeof(struct feature));
 
         return feat;
     }
@@ -542,8 +559,9 @@ private:
             feat = m_pool + i;
             ddata = &feat->ddata;
             intvl = ddata->intvl + ddata->subintvl;
-            feat->scl = SIFT_SIGMA * pow(2.0, ddata->octv + intvl / SIFT_INTVLS);
-            ddata->scl_octv = SIFT_SIGMA * pow(2.0, intvl / SIFT_INTVLS);
+            feat->scl = SIFT_SIGMA * pow(2.0, ddata->octv + intvl / (double)SIFT_INTVLS);
+            
+            ddata->scl_octv = SIFT_SIGMA * pow(2.0, intvl / (double)SIFT_INTVLS);
         }
     }
 
@@ -677,6 +695,7 @@ private:
             ddata = &feat->ddata;
 
             mv_image_t* gauss = gauss_pyramid(ddata->octv, ddata->intvl);
+            memset(hist, 0, sizeof(hist));
             descr_hist(hist, gauss, ddata->r, ddata->c, feat->ori, ddata->scl_octv);
             hist_to_descr(hist, feat);
         }
@@ -805,14 +824,15 @@ private:
     
     // Compares features for a decreasing-scale ordering.  
     static int feature_cmp(const void* feat1, const void* feat2) {
-        struct feature* f1 = (struct feature*) feat1;
-        struct feature* f2 = (struct feature*) feat2;
+        feature* f1 = *(feature**)feat1;
+        feature* f2 = *(feature**)feat2;
 
         if (f1->scl < f2->scl)
             return 1;
+            
         if (f1->scl > f2->scl)
             return -1;
-
+            
         return 0;
     }
 
@@ -834,19 +854,6 @@ private:
     }
 
 
-
-    void export_features(mv_features* features) {
-        feature* items[MAX_FEATURE_SIZE];
-        for (int i = 0; i < m_pool_used; i++) {
-            items[i] = m_pool + i;
-        }
-
-        qsort(items, m_pool_used, sizeof(feature*), feature_cmp);
-
-        for (int i = 0; i < m_pool_used; i++) {
-            features->push_back(items[i]);
-        }
-    }
 
 };
 

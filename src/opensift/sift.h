@@ -21,19 +21,19 @@
 #define SIFT_H
 
 #include "../img_proc.h"
-#include "../mv_vector.h"
+//#include "../mv_vector.h"
 
 #include "imgfeatures.h"
 
 static const int MAX_FEATURE_SIZE = 1024 * 2;
-typedef mv_vector<feature*, MAX_FEATURE_SIZE> mv_features;
+//typedef mv_vector<feature*, MAX_FEATURE_SIZE> mv_features;
 
 
 class sift_module
 { 
-public:
-    virtual ~sift_module() = 0;
-    virtual int process(mv_image_t* img, mv_features* features) = 0;
+public:   
+    virtual int process(mv_image_t* img) = 0;
+    virtual int export_features(feature* features[], int n) = 0;
 
 public:
     static sift_module* create_instance();

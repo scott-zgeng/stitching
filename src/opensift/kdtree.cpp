@@ -32,7 +32,7 @@ struct bbf_data
 
 /************************* Local Function Prototypes *************************/
 
-static struct kd_node* kd_node_init(struct feature*, int);
+static struct kd_node* kd_node_init(feature* features[], int n);
 static void expand_kd_node_subtree(struct kd_node*);
 static void assign_part_key(struct kd_node*);
 static double median_select(double*, int);
@@ -58,7 +58,7 @@ static int within_rect(mv_point_d_t, mv_rect_t);
   @return Returns the root of a kd tree built from features or NULL on
   error.
   */
-struct kd_node* kdtree_build(struct feature* features, int n)
+struct kd_node* kdtree_build(feature* features[], int n)
 {
     struct kd_node* kd_root;
 
@@ -122,7 +122,7 @@ struct feature*** nbrs, int max_nn_chks)
 
         for (i = 0; i < expl->n; i++)
         {
-            tree_feat = &expl->features[i];
+            tree_feat = expl->features[i];
             bbf_data = (struct bbf_data*)malloc(sizeof(struct bbf_data));
             if (!bbf_data) {
                 WRITE_WARN_LOG("unable to allocate memory");                
@@ -179,35 +179,35 @@ fail:
   (in case \a k neighbors could not be found before examining
   \a max_nn_checks keypoint entries).
   */
-int kdtree_bbf_spatial_knn(struct kd_node* kd_root, struct feature* feat,
-    int k, struct feature*** nbrs, int max_nn_chks,
-    mv_rect_t rect, int model)
-{
-    struct feature** all_nbrs, ** sp_nbrs;
-    mv_point_d_t pt;
-    int i, n, t = 0;
-
-    n = kdtree_bbf_knn(kd_root, feat, max_nn_chks, &all_nbrs, max_nn_chks);
-    sp_nbrs = (struct feature**)calloc(k, sizeof(struct feature*));
-    for (i = 0; i < n; i++)
-    {
-        if (model)
-            pt = all_nbrs[i]->mdl_pt;
-        else
-            pt = all_nbrs[i]->img_pt;
-
-        if (within_rect(pt, rect))
-        {
-            sp_nbrs[t++] = all_nbrs[i];
-            if (t == k)
-                goto end;
-        }
-    }
-end:
-    free(all_nbrs);
-    *nbrs = sp_nbrs;
-    return t;
-}
+//int kdtree_bbf_spatial_knn(struct kd_node* kd_root, struct feature* feat,
+//    int k, struct feature*** nbrs, int max_nn_chks,
+//    mv_rect_t rect, int model)
+//{
+//    struct feature** all_nbrs, ** sp_nbrs;
+//    mv_point_d_t pt;
+//    int i, n, t = 0;
+//
+//    n = kdtree_bbf_knn(kd_root, feat, max_nn_chks, &all_nbrs, max_nn_chks);
+//    sp_nbrs = (struct feature**)calloc(k, sizeof(struct feature*));
+//    for (i = 0; i < n; i++)
+//    {
+//        if (model)
+//            pt = all_nbrs[i]->mdl_pt;
+//        else
+//            pt = all_nbrs[i]->img_pt;
+//
+//        if (within_rect(pt, rect))
+//        {
+//            sp_nbrs[t++] = all_nbrs[i];
+//            if (t == k)
+//                goto end;
+//        }
+//    }
+//end:
+//    free(all_nbrs);
+//    *nbrs = sp_nbrs;
+//    return t;
+//}
 
 
 
@@ -238,7 +238,7 @@ void kdtree_release(struct kd_node* kd_root)
 
   @return Returns an unexpanded kd-tree node.
   */
-static struct kd_node* kd_node_init(struct feature* features, int n)
+static struct kd_node* kd_node_init(feature* features[], int n)
 {
     struct kd_node* kd_node;
 
@@ -287,25 +287,25 @@ static void expand_kd_node_subtree(struct kd_node* kd_node)
   */
 static void assign_part_key(struct kd_node* kd_node)
 {
-    struct feature* features;
+    struct feature** features;
     double kv, x, mean, var, var_max = 0;
     double* tmp;
     int d, n, i, j, ki = 0;
 
     features = kd_node->features;
     n = kd_node->n;
-    d = features[0].d;
+    d = features[0]->d;
 
     /* partition key index is that along which descriptors have most variance */
     for (j = 0; j < d; j++)
     {
         mean = var = 0;
         for (i = 0; i < n; i++)
-            mean += features[i].descr[j];
+            mean += features[i]->descr[j];
         mean /= n;
         for (i = 0; i < n; i++)
         {
-            x = features[i].descr[j] - mean;
+            x = features[i]->descr[j] - mean;
             var += x * x;
         }
         var /= n;
@@ -320,7 +320,7 @@ static void assign_part_key(struct kd_node* kd_node)
     /* partition key value is median of descriptor values at ki */
     tmp = (double*)calloc(n, sizeof(double));
     for (i = 0; i < n; i++)
-        tmp[i] = features[i].descr[ki];
+        tmp[i] = features[i]->descr[ki];
     kv = median_select(tmp, n);
     free(tmp);
 
@@ -468,7 +468,7 @@ static int partition_array(double* array, int n, double pivot)
   */
 static void partition_features(struct kd_node* kd_node)
 {
-    struct feature* features, tmp;
+    struct feature** features, * tmp;
     double kv;
     int n, ki, p, i, j = -1;
 
@@ -477,12 +477,12 @@ static void partition_features(struct kd_node* kd_node)
     ki = kd_node->ki;
     kv = kd_node->kv;
     for (i = 0; i < n; i++)
-    if (features[i].descr[ki] <= kv)
+    if (features[i]->descr[ki] <= kv)
     {
         tmp = features[++j];
         features[j] = features[i];
         features[i] = tmp;
-        if (features[j].descr[ki] == kv)
+        if (features[j]->descr[ki] == kv)
             p = j;
     }
     tmp = features[p];
@@ -517,9 +517,7 @@ static void partition_features(struct kd_node* kd_node)
   @return Returns a pointer to the leaf node at which exploration ends or
   NULL on error.
   */
-static struct kd_node* explore_to_leaf(struct kd_node* kd_node,
-struct feature* feat,
-struct min_pq* min_pq)
+static struct kd_node* explore_to_leaf(struct kd_node* kd_node, struct feature* feat, struct min_pq* min_pq)
 {
     struct kd_node* unexpl, *expl = kd_node;
     double kv;
